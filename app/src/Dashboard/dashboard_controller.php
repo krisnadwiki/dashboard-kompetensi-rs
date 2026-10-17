@@ -4,24 +4,14 @@ Auth::requireAuth();
 $user = Auth::user();
 $rs   = Db::fetchOne("SELECT * FROM rs_profile LIMIT 1");
 
-// Fetch snapshots
-$snapshots = Db::fetchAll("SELECT id, name, periode, description, source_type, total_items, created_at FROM snapshots ORDER BY id DESC");
-$selectedSnapId = isset($_GET['snapshot']) ? (int)$_GET['snapshot'] : 0;
-$activeSnapshot = null;
-if ($selectedSnapId > 0) {
-    foreach ($snapshots as $s) {
-        if ((int)$s['id'] === $selectedSnapId) {
-            $activeSnapshot = $s;
-            break;
-        }
-    }
-}
+
 
 // Summary stats
 $totalUsers   = Db::fetchOne("SELECT COUNT(*) AS cnt FROM users")['cnt'] ?? 0;
 $activeUsers  = Db::fetchOne("SELECT COUNT(*) AS cnt FROM users WHERE is_active = 1")['cnt'] ?? 0;
 $totalSyncLog = Db::fetchOne("SELECT COUNT(*) AS cnt FROM sync_log")['cnt'] ?? 0;
-$lastSync     = Db::fetchOne("SELECT created_at FROM sync_log ORDER BY id DESC LIMIT 1");
+$lastSync     = Db::fetchOne("SELECT created_at, notes FROM sync_log ORDER BY id DESC LIMIT 1");
+$totalInstrumen = Db::fetchOne("SELECT total_items FROM snapshots ORDER BY id DESC LIMIT 1")['total_items'] ?? 0;
 
 $breadcrumb = [['label' => 'Dashboard']];
 $pageTitle  = 'Dashboard';
@@ -42,90 +32,49 @@ ob_start();
   </div>
 </div>
 
-<!-- ─── PERIODE / SNAPSHOT SELECTOR ──────────────────────────────────────── -->
-<div class="card mb-24" style="background:var(--bg-card); border-left: 4px solid var(--primary);">
-  <div class="card-body" style="padding:14px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px;">
-    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-      <div style="font-weight:600; font-size:13.5px; display:flex; align-items:center; gap:8px;">
-        <i data-lucide="calendar" style="color:var(--primary); width:18px; height:18px;"></i>
-        <span>Pilih Tanggal Tarikan / Periode:</span>
-      </div>
-      <form method="GET" action="/dashboard" style="display:inline-flex; align-items:center; gap:8px;">
-        <select name="snapshot" class="form-control" style="width:auto; min-width:320px; font-weight:500;" onchange="this.form.submit()">
-          <option value="0" <?= $selectedSnapId === 0 ? 'selected' : '' ?>>📌 Data Bawaan / Terkini (Aktif &bull; 17 Okt 2026)</option>
-          <?php foreach ($snapshots as $snap): ?>
-            <option value="<?= $snap['id'] ?>" <?= $selectedSnapId === (int)$snap['id'] ? 'selected' : '' ?>>
-              📅 <?= e($snap['periode'] ?? date('Y-m-d', strtotime($snap['created_at']))) ?> &mdash; <?= e($snap['name']) ?> (<?= number_format($snap['total_items']) ?> baris)
-            </option>
-          <?php endforeach; ?>
-        </select>
-      </form>
-    </div>
-
-    <div style="display:flex; align-items:center; gap:8px;">
-      <?php if ($activeSnapshot): ?>
-        <a href="/dashboard/kompetensi?snapshot=<?= $activeSnapshot['id'] ?>" class="btn btn-sm btn-primary">
-          <i data-lucide="arrow-right-circle"></i> Buka Detail Periode Ini
-        </a>
-        <?php if ($user['role'] === 'admin'): ?>
-        <form method="POST" action="/master/snapshots/delete" onsubmit="return confirm('Hapus data tarikan periode <?= e($activeSnapshot['name']) ?>?');" style="display:inline;">
-          <?= Csrf::field() ?>
-          <input type="hidden" name="action" value="delete">
-          <input type="hidden" name="id" value="<?= $activeSnapshot['id'] ?>">
-          <button type="submit" class="btn btn-sm btn-danger" title="Hapus snapshot periode ini">
-            <i data-lucide="trash-2"></i> Hapus Periode Ini
-          </button>
-        </form>
-        <?php endif; ?>
-      <?php else: ?>
-        <a href="/dashboard/kompetensi" class="btn btn-sm btn-outline">
-          <i data-lucide="clipboard-list"></i> Buka Data Kompetensi
-        </a>
-      <?php endif; ?>
-    </div>
-  </div>
-  <?php if ($activeSnapshot): ?>
-  <div style="background:var(--bg); padding:10px 20px; border-top:1px solid var(--border); font-size:12.5px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-    <div>
-      <span class="badge badge-primary">Periode Aktif:</span> <strong><?= e($activeSnapshot['name']) ?></strong>
-      &bull; Tanggal: <code><?= e($activeSnapshot['periode'] ?? '-') ?></code>
-      &bull; Jumlah instrumen: <strong><?= number_format($activeSnapshot['total_items']) ?></strong> baris
-    </div>
-    <div class="text-muted fs-12">
-      Tarikan: <?= date('d/m/Y H:i', strtotime($activeSnapshot['created_at'])) ?>
-    </div>
-  </div>
-  <?php endif; ?>
-</div>
 
 <!-- Stat cards -->
 <div class="stat-grid">
   <div class="stat-card">
     <div class="stat-icon blue"><i data-lucide="building-2"></i></div>
     <div class="stat-info">
-      <div class="stat-value"><?= e($rs['nama_rs'] ?? '-') ?></div>
+      <div class="stat-value" title="<?= e($rs['nama_rs'] ?? '-') ?>"><?= e($rs['nama_rs'] ?? '-') ?></div>
       <div class="stat-label">Nama Faskes</div>
+      <?php if (!empty($rs['kelas_rs'])): ?>
+      <div class="stat-sublabel">Kelas <?= e($rs['kelas_rs']) ?> — <?= e($rs['kepemilikan'] ?? '') ?></div>
+      <?php endif; ?>
     </div>
   </div>
+
   <div class="stat-card">
     <div class="stat-icon green"><i data-lucide="database"></i></div>
     <div class="stat-info">
-      <div class="stat-value"><?= count($snapshots) ?></div>
-      <div class="stat-label">Snapshot Tersimpan</div>
+      <div class="stat-value"><?= number_format($totalInstrumen) ?></div>
+      <div class="stat-label">Total Instrumen Terkini</div>
+      <div class="stat-sublabel">Baris data dari tarikan SIRS</div>
     </div>
   </div>
+
   <div class="stat-card">
     <div class="stat-icon cyan"><i data-lucide="refresh-cw"></i></div>
     <div class="stat-info">
       <div class="stat-value"><?= $totalSyncLog ?></div>
       <div class="stat-label">Riwayat Log Tarikan</div>
+      <div class="stat-sublabel">Total sinkronisasi tercatat</div>
     </div>
   </div>
   <div class="stat-card">
     <div class="stat-icon amber"><i data-lucide="clock"></i></div>
     <div class="stat-info">
-      <div class="stat-value"><?= $lastSync ? date('d/m/Y', strtotime($lastSync['created_at'])) : '-' ?></div>
+      <?php if ($lastSync): ?>
+      <div class="stat-value"><?= date('d M Y', strtotime($lastSync['created_at'])) ?></div>
       <div class="stat-label">Tarikan Terakhir</div>
+      <div class="stat-sublabel">Pukul <?= date('H:i', strtotime($lastSync['created_at'])) ?> WIB</div>
+      <?php else: ?>
+      <div class="stat-value">—</div>
+      <div class="stat-label">Tarikan Terakhir</div>
+      <div class="stat-sublabel">Belum ada data</div>
+      <?php endif; ?>
     </div>
   </div>
 </div>

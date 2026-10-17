@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>404 - Halaman Tidak Ditemukan</title>
-  <link rel="stylesheet" href="/assets/css/app.css">
+  <link rel="stylesheet" href="<?= asset('/assets/css/app.css') ?>">
   <style>
     body { display:flex; align-items:center; justify-content:center; min-height:100vh; text-align:center; padding:20px; }
     .box { max-width:440px; }

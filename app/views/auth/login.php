@@ -6,12 +6,12 @@
   <title>Masuk | Kompetensi RS</title>
   <meta name="description" content="Login Sistem Informasi Kompetensi Rumah Sakit">
   <meta name="robots" content="noindex, nofollow">
-  <link rel="icon" type="image/svg+xml" href="/assets/img/logo.svg">
+  <link rel="icon" type="image/svg+xml" href="<?= asset('/assets/img/logo.svg') ?>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <link rel="stylesheet" href="/assets/css/app.css">
-  <link rel="stylesheet" href="/assets/css/login.css">
+  <link rel="stylesheet" href="<?= asset('/assets/css/app.css') ?>">
+  <link rel="stylesheet" href="<?= asset('/assets/css/login.css') ?>">
 </head>
 <body class="login-body">
 
@@ -28,7 +28,7 @@
     <!-- Header -->
     <div class="login-header">
       <div class="login-logo">
-        <img src="/assets/img/logo.svg" alt="Logo" width="48" height="48">
+        <img src="<?= asset('/assets/img/logo.svg') ?>" alt="Logo" width="48" height="48">
       </div>
       <h1 class="login-title">Kompetensi RS</h1>
       <p class="login-subtitle">Sistem Informasi Kompetensi Rumah Sakit</p>

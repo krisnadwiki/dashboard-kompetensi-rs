@@ -1053,10 +1053,45 @@ if (window.self !== window.top) {
         loadCustomSnapshot(data.items, data.name || 'Tarikan SIRS Terkini');
         const lead = $('lead');
         if (lead) {
-          lead.innerHTML = 'Data Terkini SIRS Online <b>(' + (data.periode || 'Hari ini') + ')</b> &bull; ' + data.total.toLocaleString('id-ID') + ' baris instrumen terintegrasi.';
+          // Format timestamp from created_at
+          let tsStr = '';
+          if (data.created_at) {
+            const dt = new Date(data.created_at.replace(' ', 'T'));
+            if (!isNaN(dt)) {
+              const tgl = dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' });
+              const jam = dt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
+              tsStr = ` &mdash; Diperbarui <b>${tgl}</b> pukul <b>${jam} WIB</b>`;
+            }
+          }
+          const periodeLabel = data.periode ? ` <span style="background:rgba(59,110,240,0.12);color:var(--primary);padding:1px 7px;border-radius:5px;font-weight:600;">${data.periode}</span>` : '';
+          lead.innerHTML =
+            'Data instrumen SIRS Online terkini' + periodeLabel +
+            ' &bull; <b>' + data.total.toLocaleString('id-ID') + ' baris</b> instrumen terstandar terintegrasi' +
+            tsStr + '.';
+        }
+        // Update live-tag
+        const liveTag = $('live-tag');
+        if (liveTag) {
+          liveTag.innerHTML = '&#x25CF; Data Terkini';
         }
       }
     })
     .catch(() => {});
 }
 
+// Live clock for standalone view
+(function startClock() {
+  const clockEl = document.getElementById('live-clock');
+  if (!clockEl) return;
+  function tick() {
+    const now = new Date();
+    const wib = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+    const h = String(wib.getHours()).padStart(2, '0');
+    const m = String(wib.getMinutes()).padStart(2, '0');
+    const s = String(wib.getSeconds()).padStart(2, '0');
+    const tgl = wib.toLocaleDateString('id-ID', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+    clockEl.textContent = `${tgl}, ${h}:${m}:${s} WIB`;
+  }
+  tick();
+  setInterval(tick, 1000);
+})();

@@ -89,3 +89,38 @@ function appUrl(string $path = ''): string
 
     return $path ? $baseUrl . '/' . ltrim($path, '/') : $baseUrl;
 }
+
+// ─── Asset URL helper (cache busting) ───────────────────────────────────────
+// Menghasilkan URL asset dengan query string ?v=<filemtime> otomatis.
+// Saat file berubah, browser WAJIB unduh ulang (cache buster).
+// Saat file TIDAK berubah, browser pakai cache (efisien, hemat bandwidth).
+//
+// Contoh hasil: /assets/css/app.css?v=1729180200
+//
+// @param string $path  Path relatif dari public root, misal '/assets/css/app.css'
+// @return string       URL lengkap dengan versi
+function asset(string $path): string
+{
+    static $versions = [];
+
+    if (!isset($versions[$path])) {
+        $cleanPath = ltrim($path, '/');
+        $baseDir   = defined('ROOT') ? ROOT : dirname(__DIR__);
+
+        // Cari file fisik: cek ROOT/<path> (misal /assets/css/app.css -> ROOT/assets/css/app.css)
+        $filePath  = $baseDir . '/' . $cleanPath;
+        if (!file_exists($filePath)) {
+            // Cek kemungkinan ada di dalam ROOT/public/<path>
+            $filePath = $baseDir . '/public/' . $cleanPath;
+        }
+
+        if (file_exists($filePath)) {
+            $versions[$path] = (string) filemtime($filePath);
+        } else {
+            // Fallback ke APP_VER jika file fisik tidak ditemukan
+            $versions[$path] = defined('APP_VER') ? preg_replace('/[^a-z0-9.]/i', '', APP_VER) : '1';
+        }
+    }
+
+    return $path . '?v=' . $versions[$path];
+}

@@ -7,16 +7,16 @@
   <meta name="description" content="Sistem Informasi Kompetensi Rumah Sakit">
   <meta name="robots" content="noindex, nofollow">
   <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="/assets/img/logo.svg">
+  <link rel="icon" type="image/svg+xml" href="<?= asset('/assets/img/logo.svg') ?>">
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <!-- App CSS -->
-  <link rel="stylesheet" href="/assets/css/app.css?v=<?= @filemtime(dirname(__DIR__, 2) . '/assets/css/app.css') ?: time() ?>">
+  <link rel="stylesheet" href="<?= asset('/assets/css/app.css') ?>">
   <?php if (isset($extraCss)): foreach ($extraCss as $css): ?>
-  <link rel="stylesheet" href="<?= e($css) ?>">
+  <link rel="stylesheet" href="<?= asset(e($css)) ?>">
   <?php endforeach; endif; ?>
 </head>
 <body class="has-sidebar">
@@ -25,7 +25,7 @@
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
     <div class="sidebar-logo">
-      <img src="/assets/img/logo.svg" alt="Logo" width="32" height="32">
+      <img src="<?= asset('/assets/img/logo.svg') ?>" alt="Logo" width="32" height="32">
       <span class="sidebar-logo-text">Kompetensi RS</span>
     </div>
     <button class="sidebar-toggle-close" id="sidebarClose" aria-label="Tutup sidebar">
@@ -246,7 +246,7 @@
 </script>
 
 <?php if (isset($extraJs)): foreach ($extraJs as $js): ?>
-<script src="<?= e($js) ?>"></script>
+<script src="<?= asset(e($js)) ?>"></script>
 <?php endforeach; endif; ?>
 
 </body>
