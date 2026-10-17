@@ -217,6 +217,10 @@ $breadcrumb = [
 ];
 $pageTitle = 'Sinkronisasi RS Online (SIRS)';
 
+$targetApiUrl    = appUrl('/api/ingest-sirs');
+$targetImportUrl = appUrl('/master/sinkronisasi?import_clipboard=1');
+$targetSimrsUrl  = appUrl('/master/sinkronisasi');
+
 // Bookmarklet JS: menarik semua 24 layanan dengan group unik per item
 // PENTING: pakai textContent bukan innerText - DOMParser tidak punya layout jadi innerText selalu kosong!
 $bookmarkletUrl = "javascript:(function(){"
@@ -233,11 +237,11 @@ $bookmarkletUrl = "javascript:(function(){"
     . "function finish(){"
     .   "box.style.background='#16a34a';"
     .   "box.innerHTML='<b>&#10003; Selesai mengumpulkan '+all.length+' baris!</b><br>Mengirim ke SIMRS...';"
-    .   "fetch('http://localhost:8088/api/ingest-sirs',{method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},"
+    .   "fetch('" . addslashes($targetApiUrl) . "',{method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},"
     .     "body:JSON.stringify({items:all,snapshot_name:'Tarik Otomatis 24 Layanan SIRS '+new Date().toLocaleDateString('id-ID')+' '+new Date().toLocaleTimeString('id-ID'),periode:new Date().toISOString().slice(0,10)})})"
     .   ".then(function(r){return r.json();})"
     .   ".then(function(res){"
-    .     "box.innerHTML='<b>&#10004; SUKSES DISIMPAN!</b><br>'+res.message+'<br><small>Kembali ke SIMRS.</small>';"
+    .     "box.innerHTML='<b>&#10004; SUKSES DISIMPAN!</b><br>'+res.message+'<br><small><a href=\"" . addslashes($targetSimrsUrl) . "\" target=\"_blank\" style=\"color:#fff;text-decoration:underline;\">&#128279; Buka Hasil di SIMRS</a></small>';"
     .     "setTimeout(function(){box.remove();},10000);"
     .   "})"
     .   ".catch(function(){"
@@ -245,12 +249,12 @@ $bookmarkletUrl = "javascript:(function(){"
     .     "box.style.background='#d97706';"
     .     "if(navigator.clipboard&&navigator.clipboard.writeText){"
     .       "navigator.clipboard.writeText(payload).then(function(){"
-    .         "box.innerHTML='<b>&#128203; '+all.length+' baris di-copy ke Clipboard!</b><br><small>Karena halaman SIRS adalah HTTPS, data tidak bisa langsung dikirim ke HTTP localhost.<br>Klik tombol di bawah untuk import di SIMRS:</small><br><br><a href=\"http://localhost:8088/master/sinkronisasi?import_clipboard=1\" target=\"_blank\" style=\"display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:8px 16px;border-radius:6px;font-size:14px;font-weight:bold;\">&#128279; Buka SIMRS &amp; Import</a>';"
+    .         "box.innerHTML='<b>&#128203; '+all.length+' baris di-copy ke Clipboard!</b><br><small>Data siap dimasukkan ke SIMRS.<br>Klik tombol di bawah untuk import otomatis:</small><br><br><a href=\"" . addslashes($targetImportUrl) . "\" target=\"_blank\" style=\"display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:8px 16px;border-radius:6px;font-size:14px;font-weight:bold;\">&#128279; Buka SIMRS &amp; Import</a>';"
     .       "}).catch(function(){"
-    .         "box.innerHTML='<b>Data siap ('+all.length+' baris)</b><br><small>Clipboard tidak tersedia. Salin URL berikut:<br></small><input readonly value=\"http://localhost:8088/master/sinkronisasi?import_clipboard=1\" style=\"width:100%;font-size:11px;\">';"
+    .         "box.innerHTML='<b>Data siap ('+all.length+' baris)</b><br><small>Clipboard tidak tersedia. Salin URL berikut:<br></small><input readonly value=\"" . addslashes($targetImportUrl) . "\" style=\"width:100%;font-size:11px;\">';"
     .       "});"
     .     "}else{"
-    .       "box.innerHTML='<b>Data siap ('+all.length+' baris)</b><br><small>Buka SIMRS dan import dari clipboard.</small><br><br><a href=\"http://localhost:8088/master/sinkronisasi?import_clipboard=1\" target=\"_blank\" style=\"display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:8px 16px;border-radius:6px;\">Buka SIMRS</a>';"
+    .       "box.innerHTML='<b>Data siap ('+all.length+' baris)</b><br><small>Buka SIMRS dan import dari clipboard.</small><br><br><a href=\"" . addslashes($targetImportUrl) . "\" target=\"_blank\" style=\"display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:8px 16px;border-radius:6px;\">Buka SIMRS</a>';"
     .     "}"
     .   "});"
     . "}"
@@ -389,6 +393,10 @@ ob_start();
           <i data-lucide="zap"></i> ⚡ Bookmarklet Tarik Semua 24 Layanan (1-Klik)
         </a>
         <span class="text-muted fs-12">(Tarik tombol ke Bookmarks Bar browser Anda)</span>
+        <div style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px; margin-top:4px;">
+          <span>Target SIMRS:</span>
+          <code style="background:var(--bg-input); border:1px solid var(--border); padding:2px 8px; border-radius:6px; font-weight:600; color:var(--primary);"><?= e(appUrl()) ?></code>
+        </div>
       </div>
 
     </div>
