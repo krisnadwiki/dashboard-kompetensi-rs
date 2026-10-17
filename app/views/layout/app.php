@@ -3,11 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#3b6ef0">
   <title><?= e($pageTitle ?? 'Kompetensi RS') ?> | Kompetensi RS</title>
-  <meta name="description" content="Sistem Informasi Kompetensi Rumah Sakit">
+  <meta name="description" content="Sistem Informasi Kompetensi Rumah Sakit — Pantau & kelola kompetensi SDM dan alkes RS secara real-time.">
   <meta name="robots" content="noindex, nofollow">
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="<?= asset('/assets/img/logo.svg') ?>">
+  <link rel="apple-touch-icon" href="<?= asset('/assets/img/logo.svg') ?>">
+
+  <!-- ─── Open Graph / WhatsApp / Facebook ──────────────────────────────── -->
+  <meta property="og:title" content="<?= e($pageTitle ?? 'Kompetensi RS') ?> — Kompetensi RS">
+  <meta property="og:description" content="Pantau & kelola kompetensi SDM dan alat kesehatan rumah sakit secara real-time, terintegrasi dengan SIRS Online Kemenkes.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Kompetensi RS">
+  <meta property="og:url" content="<?= appUrl($_SERVER['REQUEST_URI'] ?? '/') ?>">
+  <meta property="og:image" content="<?= appUrl(asset('/assets/img/og-image.png')) ?>">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Kompetensi RS — Sistem Informasi Kompetensi Rumah Sakit">
+  <meta property="og:locale" content="id_ID">
+
+  <!-- ─── Twitter Card ─────────────────────────────────────────────────── -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="<?= e($pageTitle ?? 'Kompetensi RS') ?> — Kompetensi RS">
+  <meta name="twitter:description" content="Pantau & kelola kompetensi SDM dan alat kesehatan rumah sakit secara real-time.">
+  <meta name="twitter:image" content="<?= appUrl(asset('/assets/img/og-image.png')) ?>">
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
