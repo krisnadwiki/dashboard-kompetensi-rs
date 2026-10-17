@@ -152,12 +152,12 @@ function renderMsgs(msgs) {
 
 function loadSeed() {
   sources = new Map();
-  for (const [no, layanan, strata, kode, nama, kelompok, status, jumlah, group] of SEED) {
+  for (const [no, layanan, strata, kode, nama, kelompok, status, jumlah, group, kategori] of SEED) {
     const jenis = jenisOf(kelompok, group);
     const komp = jenis === "SDM" ? "SDM" : "Alkes";
     const key = no + "|" + komp;
     if (!sources.has(key)) sources.set(key, { file: "rekap 17 Okt 2026", at: "2026-10-17", rows: [], user: false });
-    sources.get(key).rows.push({ no, layanan, strata, kode, nama, kelompok, jenis, komp, status: status === "wajib" ? "Wajib" : "Substitusi", jumlah, group });
+    sources.get(key).rows.push({ no, layanan, strata, kode, nama, kelompok, kategori: kategori || "", jenis, komp, status: status === "wajib" ? "Wajib" : "Substitusi", jumlah, group });
   }
 }
 
@@ -179,6 +179,7 @@ function loadCustomSnapshot(rawItems, label = "Snapshot") {
     const status   = Array.isArray(row) ? row[6] : (row.status || "wajib");
     const jumlah   = Array.isArray(row) ? row[7] : (num(row.jumlah));
     const group    = Array.isArray(row) ? row[8] : (row.group || "");
+    const kategori = Array.isArray(row) ? (row[9] || "") : (row.kategori || "");
 
     if (!nama && !kelompok) continue; // skip baris kosong
 
@@ -201,7 +202,7 @@ function loadCustomSnapshot(rawItems, label = "Snapshot") {
 
     sources.get(key).rows.push({
       no, layanan: LAYANAN[no] || layanan, strata: strata || "Dasar", kode, nama, kelompok,
-      jenis: jenis || "Alat", komp,
+      kategori, jenis: jenis || "Alat", komp,
       status: /wajib/i.test(status) ? "Wajib" : "Substitusi",
       jumlah: Number(jumlah) || 0, group: safeGroup
     });
@@ -286,9 +287,11 @@ function buildModel() {
     const missing = [...w.filter((i) => !(i.jumlah > 0)), ...(sOk ? [] : s)];
     const have = its.filter((i) => i.jumlah > 0);
     const label = mainItem(its, komp);
+    const katNakes = its.find((i) => i.kategori)?.kategori || "";
     const g = {
       no: Number(no), layanan: LAYANAN[no], strata, komp, jenis: its[0].jenis, group, sifat, met,
       nItems: its.length, label,
+      kategoriNakes: katNakes,
       persyaratan: komp === "SDM" ? label : listNames(its),
       kurang: met ? "" : (komp === "SDM" && !w.length ? label : listNames(missing)),
       dipenuhi: met ? have.map((i) => `${i.nama} (${i.jumlah})`).slice(0, 3).join("; ") : "",
@@ -322,24 +325,78 @@ function rebuild() {
   renderCoverage(); renderKpis(); renderMatrix(); renderBars(); renderTop(); renderTable(); renderAllTable();
 }
 
+let covUserToggled = false;
+function initCoverageAccordion() {
+  const header = $("data-accordion-header");
+  const btn = $("data-toggle-btn");
+  const body = $("data-collapse-body");
+  const icon = $("data-toggle-icon");
+  const text = $("data-toggle-text");
+  if (!header || !body) return;
+
+  const toggle = () => {
+    covUserToggled = true;
+    const isClosed = body.style.display === "none";
+    body.style.display = isClosed ? "block" : "none";
+    if (icon) icon.textContent = isClosed ? "▲" : "▼";
+    if (text) text.textContent = isClosed ? "Tutup Rincian" : "Buka Rincian";
+  };
+
+  header.addEventListener("click", (e) => {
+    if (e.target.closest("#data-toggle-btn")) return;
+    toggle();
+  });
+  btn?.addEventListener("click", () => toggle());
+}
+
 function renderCoverage() {
   const cov = $("cov");
   const rows = [];
+  let completeServices = 0;
   for (let i = 1; i <= 24; i++) {
     const d = el("div");
     d.append(el("span", "n", String(i)), el("span", "nm", LAYANAN[i]));
+    let bothFilled = true;
     for (const komp of ["SDM", "Alkes"]) {
       const s = sources.get(i + "|" + komp);
-      const t = el("span", "tag " + (!s ? "off" : s.user ? "on" : "seed"), komp === "SDM" ? "SDM" : "Alkes");
-      t.title = s ? `${s.file} · ${fmtInt(s.rows.length)} baris` : "belum ada data";
+      const hasRows = !!(s && s.rows && s.rows.length);
+      if (!hasRows) bothFilled = false;
+      const t = el("span", "tag " + (!hasRows ? "off" : s.user ? "on" : "seed"), komp === "SDM" ? "SDM" : "Alkes");
+      t.title = hasRows ? `${s.file} · ${fmtInt(s.rows.length)} baris` : "belum ada data";
       d.append(t);
     }
+    if (bothFilled) completeServices++;
     rows.push(d);
   }
   cov.replaceChildren(...rows);
   const user = [...sources.values()].filter((v) => v.user);
   const srcName = user.length ? (user[0]?.file || "Snapshot Kustom") : "Rekap Bawaan SIRS";
   $("src-line").textContent = `${fmtInt(model.items.length)} baris instrumen aktif (${srcName}).`;
+
+  // Accordion badge & auto-collapse
+  const badge = $("data-status-badge");
+  const body = $("data-collapse-body");
+  const icon = $("data-toggle-icon");
+  const text = $("data-toggle-text");
+  const isComplete = completeServices === 24;
+
+  if (badge) {
+    badge.className = "tag " + (isComplete ? "on" : "off");
+    badge.textContent = isComplete ? "✓ 24/24 Lengkap" : `${completeServices}/24 Lengkap`;
+  }
+
+  // Jika lengkap, collapse accordion secara default (hanya jika belum di-toggle manual)
+  if (!covUserToggled && body) {
+    if (isComplete) {
+      body.style.display = "none";
+      if (icon) icon.textContent = "▼";
+      if (text) text.textContent = "Buka Rincian";
+    } else {
+      body.style.display = "block";
+      if (icon) icon.textContent = "▲";
+      if (text) text.textContent = "Tutup Rincian";
+    }
+  }
 }
 
 function renderKpis() {
@@ -367,6 +424,8 @@ function renderKpis() {
 const pick = (no, strata) => {
   if (ui.pick.no === no && ui.pick.strata === strata) ui.pick = { no: null, strata: null };
   else ui.pick = { no, strata };
+  const fLay = $("f-layanan");
+  if (fLay) fLay.value = ui.pick.no ? String(ui.pick.no) : "";
   renderMatrix(); renderBars(); renderTable();
   if (ui.pick.no) $("daftar").scrollIntoView({ behavior: "smooth", block: "start" });
 };
@@ -509,10 +568,13 @@ function renderTop() {
 }
 
 function renderTable() {
+  initLayananDropdowns();
   const term = $("q").value.trim().toLowerCase();
+  const flay = $("f-layanan")?.value ? Number($("f-layanan").value) : 0;
   const fk = $("f-komp").value, fs = $("f-strata").value, ff = $("f-sifat").value;
   const p = ui.pick;
   let rows = model.gaps.filter((g) =>
+    (!flay || g.no === flay) &&
     (!p.no || g.no === p.no) && (!p.strata || g.strata === p.strata) && (!fk || g.komp === fk) && (!fs || g.strata === fs) &&
     (!ff || (ff === "Wajib" ? g.sifat !== "Substitusi" : g.sifat === "Substitusi")) &&
     (!term || [g.layanan, g.strata, g.group, g.kurang, g.persyaratan, g.item, g.komp].join(" ").toLowerCase().includes(term)));
@@ -532,7 +594,14 @@ function renderTable() {
       tr.append(el("td", null, `${g.no}. ${g.layanan}`), el("td", null, g.strata));
       const tk = el("td"); tk.append(el("span", "pill " + (g.komp === "SDM" ? "k-sdm" : "k-alk"), g.komp === "SDM" ? "SDM" : g.jenis === "Sarana" ? "Sarana" : "Alkes")); tr.append(tk);
       tr.append(el("td", "code hide-sm", g.group));
-      tr.append(el("td", null, g.kurang || g.persyaratan));
+      const tdKurang = el("td");
+      tdKurang.append(el("div", null, g.kurang || g.persyaratan));
+      if (g.komp === "SDM" && g.kategoriNakes) {
+        const sub = el("div", "hide-sm", `Kategori Nakes: ${g.kategoriNakes}`);
+        sub.style.cssText = "font-size:11.5px; color:var(--muted); margin-top:2px;";
+        tdKurang.append(sub);
+      }
+      tr.append(tdKurang);
       const ts = el("td"); ts.append(el("span", "pill " + (g.sifat === "Substitusi" ? "s" : "w"), g.sifat)); tr.append(ts);
       return tr;
     }));
@@ -550,19 +619,21 @@ const allUi = {
   filteredItems: []
 };
 
-function initAllLayananDropdown() {
-  const sel = $("all-f-layanan");
-  if (!sel || sel.children.length > 1) return;
-  for (let i = 1; i <= 24; i++) {
-    const opt = document.createElement("option");
-    opt.value = i;
-    opt.textContent = `${i}. ${LAYANAN[i]}`;
-    sel.appendChild(opt);
-  }
+function initLayananDropdowns() {
+  const selects = [$("all-f-layanan"), $("f-layanan")];
+  selects.forEach((sel) => {
+    if (!sel || sel.children.length > 1) return;
+    for (let i = 1; i <= 24; i++) {
+      const opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = `${i}. ${LAYANAN[i]}`;
+      sel.appendChild(opt);
+    }
+  });
 }
 
 function renderAllTable() {
-  initAllLayananDropdown();
+  initLayananDropdowns();
   if (!model || !model.items) return;
 
   const term = ($("all-q")?.value || "").trim().toLowerCase();
@@ -580,7 +651,7 @@ function renderAllTable() {
     if (fkondisi === "ada" && !(it.jumlah > 0)) return false;
     if (fkondisi === "kosong" && it.jumlah > 0) return false;
     if (term) {
-      const haystack = [it.no, it.layanan, it.strata, it.komp, it.nama, it.kelompok, it.kode, it.group, it.status].join(" ").toLowerCase();
+      const haystack = [it.no, it.layanan, it.strata, it.komp, it.nama, it.kategori, it.kelompok, it.kode, it.group, it.status].join(" ").toLowerCase();
       if (!haystack.includes(term)) return false;
     }
     return true;
@@ -684,6 +755,12 @@ function renderAllTable() {
       const codeSpan = el("span", "code hide-sm", ` (${it.kode})`);
       codeSpan.style.opacity = "0.7";
       tdNama.appendChild(codeSpan);
+    }
+    if (it.kategori) {
+      const katDiv = el("div", "hide-sm");
+      katDiv.style.cssText = "font-size:11.5px; color:var(--muted); font-weight:normal; margin-top:2px;";
+      katDiv.textContent = `Kategori Nakes: ${it.kategori}`;
+      tdNama.appendChild(katDiv);
     }
     tr.append(tdNama);
 
@@ -927,11 +1004,20 @@ $("btn-reset")?.addEventListener("click", () => { state.seedOff = false; loadSee
 $("btn-clear")?.addEventListener("click", () => { $("confirm-clear").hidden = false; });
 $("btn-clear-no")?.addEventListener("click", () => { $("confirm-clear").hidden = true; });
 $("btn-clear-yes")?.addEventListener("click", () => { $("confirm-clear").hidden = true; sources = new Map(); state.seedOff = true; persist(); renderMsgs([["ok", "Data dikosongkan. Unggah CSV 24 layanan."]]); rebuild(); });
-["q", "f-komp", "f-strata", "f-sifat"].forEach((id) => $(id)?.addEventListener("input", renderTable));
-$("picked")?.addEventListener("click", () => pick(ui.pick.no, ui.pick.strata));
+["q", "f-layanan", "f-komp", "f-strata", "f-sifat"].forEach((id) => {
+  $(id)?.addEventListener("input", renderTable);
+  $(id)?.addEventListener("change", renderTable);
+});
+$("picked")?.addEventListener("click", () => {
+  pick(ui.pick.no, ui.pick.strata);
+  const fLay = $("f-layanan");
+  if (fLay) fLay.value = "";
+  renderTable();
+});
 document.querySelectorAll("table.gap th").forEach((th) => th.querySelector("button")?.addEventListener("click", () => {
   const k = th.dataset.k; if (ui.sortK === k) ui.sortDir = -ui.sortDir; else { ui.sortK = k; ui.sortDir = 1; } renderTable();
 }));
+initCoverageAccordion();
 
 // Tab Switching
 $("tab-btn-gap")?.addEventListener("click", () => {
@@ -1069,10 +1155,10 @@ if (window.self !== window.top) {
             ' &bull; <b>' + data.total.toLocaleString('id-ID') + ' baris</b> instrumen terstandar terintegrasi' +
             tsStr + '.';
         }
-        // Update live-tag
+        // Update live-tag (single pulsing bullet from CSS ::before)
         const liveTag = $('live-tag');
         if (liveTag) {
-          liveTag.innerHTML = '&#x25CF; Data Terkini';
+          liveTag.textContent = 'Data Terkini';
         }
       }
     })

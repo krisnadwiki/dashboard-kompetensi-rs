@@ -354,6 +354,12 @@ td.code { font-family: var(--f-mono); font-size: .76rem; color: var(--muted); wh
 #live-tag {
   position: relative;
 }
+#data-accordion-header {
+  transition: opacity 0.15s ease;
+}
+#data-accordion-header:hover {
+  opacity: 0.88;
+}
 #live-tag::before {
   content: "";
   display: inline-block;

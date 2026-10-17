@@ -22,7 +22,7 @@
             style="background:rgba(59,110,240,0.12); color:var(--primary); padding:2px 8px; border-radius:6px; font-weight:700;">RSUD
             KILISUCI</span>
           <span>&bull; Monitoring Terstandar 24 Layanan RS Online</span>
-          <span class="tag on" id="live-tag" style="display:inline-flex; align-items:center; gap:4px;">&#x25CF; Data Terkini</span>
+          <span class="tag on" id="live-tag" style="display:inline-flex; align-items:center; gap:6px;">Data Terkini</span>
           <span id="live-clock" style="font-size:.72rem; color:var(--muted); font-variant-numeric:tabular-nums; font-family:var(--f-mono, monospace);"></span>
         </div>
         <h1>Kompetensi Layanan RSUD Kilisuci</h1>
@@ -37,20 +37,27 @@
       </div>
     </header>
 
-    <!-- Overview Kelengkapan 24 Layanan Terstandar -->
+    <!-- Overview Kelengkapan 24 Layanan Terstandar (Accordion) -->
     <section class="card" id="data">
-      <div
-        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-        <div>
+      <div id="data-accordion-header" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; user-select:none; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; align-items:center; gap:10px;">
           <h2 style="margin:0; font-size:1rem; font-weight:600;">Status Kelengkapan 24 Layanan</h2>
-          <div class="status-line" id="src-line" style="margin-top:2px;"></div>
+          <span id="data-status-badge" class="tag on" style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem;">Memuat...</span>
         </div>
-        <div style="font-size:0.8rem; color:var(--muted); display:flex; align-items:center; gap:8px;">
-          <span class="tag on">Tersedia</span> Data aktif &bull; <span class="tag off">Kosong</span> Belum terisi
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="font-size:0.8rem; color:var(--muted); display:flex; align-items:center; gap:8px;">
+            <span class="tag on">Tersedia</span> Data aktif &bull; <span class="tag off">Kosong</span> Belum terisi
+          </div>
+          <button type="button" id="data-toggle-btn" class="btn" style="padding:3px 10px; font-size:0.75rem; border-radius:6px;">
+            <span id="data-toggle-icon">▼</span> <span id="data-toggle-text">Buka Rincian</span>
+          </button>
         </div>
       </div>
-      <div class="cov" id="cov"></div>
-      <ul class="msgs" id="msgs" style="margin-top:10px;"></ul>
+      <div class="status-line" id="src-line" style="margin-top:4px;"></div>
+      <div id="data-collapse-body" style="margin-top:12px; display:none;">
+        <div class="cov" id="cov"></div>
+        <ul class="msgs" id="msgs" style="margin-top:10px;"></ul>
+      </div>
     </section>
 
     <section class="kpis" id="kpis">
@@ -130,6 +137,9 @@
         </div>
         <div class="tools">
           <input type="search" id="q" placeholder="Cari item, kode group, layanan…" aria-label="Cari kekurangan">
+          <select id="f-layanan" aria-label="Pilih Layanan">
+            <option value="">Semua 24 Layanan</option>
+          </select>
           <select id="f-komp" aria-label="Komponen">
             <option value="">Semua komponen</option>
             <option value="SDM">SDM</option>
@@ -174,10 +184,6 @@
             <h2>Seluruh Detil Komponen Terstandar RS Online</h2>
             <p class="note">Data lengkap seluruh instrumen SDM dan Alkes per layanan &amp; strata, format dan skema
               warna standar RS Online.</p>
-          </div>
-          <div class="panel-actions">
-            <button type="button" class="btn" id="btn-export-all-filter" title="Unduh CSV data yang sedang terfilter">📥
-              Unduh CSV Terfilter</button>
           </div>
         </div>
 

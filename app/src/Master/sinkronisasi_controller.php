@@ -103,8 +103,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $jumlah  = 1;
             $group   = ($komponen === 'SDM') ? 'ksdm01' : 'kalkes01';
 
-            if (count($cols) >= 9) {
-                // Direct full item export [no, layanan, strata, kode, nama, kelompok, status, jumlah, group]
+            // 1. Direct full item export [no, layanan, strata, kode, nama, kelompok, status, jumlah, group, [kategori]]
+            if (count($cols) >= 9 && (is_numeric(trim($cols[0])) && (int)trim($cols[0]) >= 1 && (int)trim($cols[0]) <= 24)) {
                 $noLay = (int)$cols[0];
                 $parsedItems[] = [
                     $noLay ?: $noLayanan,
@@ -115,13 +115,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $cols[5] ?? 'SDM Medis',
                     $cols[6] ?? 'wajib',
                     is_numeric($cols[7]) ? (int)$cols[7] : 1,
-                    $cols[8] ?? 'ksdm01'
+                    $cols[8] ?? 'ksdm01',
+                    $cols[9] ?? ''
                 ];
                 continue;
             }
 
+            $isStrata = in_array(strtolower(trim($cols[1] ?? '')), ['dasar', 'madya', 'utama', 'paripurna']);
+            $col4IsKelompok = in_array(strtolower(trim($cols[4] ?? '')), ['alat kesehatan', 'sarana']);
+            $col3IsSDM = strtolower(trim($cols[3] ?? '')) === 'sdm medis';
+            $col5IsStatus = in_array(strtolower(trim($cols[5] ?? '')), ['substitusi', 'wajib']);
+            $col4IsStatus = in_array(strtolower(trim($cols[4] ?? '')), ['substitusi', 'wajib']);
+
+            // 2. Format 8 kolom Alkes & Sarana RS Online:
+            // No (0), Strata (1), Kode (2), Nama (3), Kelompok (4), Status (5), Jumlah (6), Group (7)
+            if ($isStrata && count($cols) >= 8 && ($col4IsKelompok || ($col5IsStatus && is_numeric(trim($cols[2] ?? ''))) || $komponen === 'Alkes')) {
+                $strata   = ucfirst(strtolower(trim($cols[1])));
+                $kode     = trim($cols[2]);
+                $nama     = trim($cols[3]);
+                $rawKel   = strtolower(trim($cols[4]));
+                $kel      = ($rawKel === 'sarana') ? 'Sarana' : 'Alat Kesehatan';
+                $status   = strtolower(trim($cols[5])) === 'substitusi' ? 'substitusi' : 'wajib';
+                $jumlah   = is_numeric(trim($cols[6])) ? (int)trim($cols[6]) : 0;
+                $group    = trim($cols[7]) ?: $group;
+                $kategori = '';
+
+                $parsedItems[] = [
+                    $noLayanan,
+                    $namaLayanan,
+                    $strata,
+                    $kode,
+                    $nama,
+                    $kel,
+                    $status,
+                    $jumlah,
+                    $group,
+                    $kategori
+                ];
+                continue;
+            }
+
+            // 3. Format 7-8 kolom SDM Medis standar SIRS:
+            // No (0), Strata (1), Nama (2), Kelompok (3), Status (4), Jumlah (5), Group (6), [Kategori Nakes (7)]
+            if ($isStrata && count($cols) >= 7 && ($col3IsSDM || $col4IsStatus || !is_numeric(trim($cols[2] ?? '')))) {
+                $strata   = ucfirst(strtolower(trim($cols[1])));
+                $kode     = '';
+                $nama     = trim($cols[2]);
+                $kel      = trim($cols[3]) ?: 'SDM Medis';
+                $status   = strtolower(trim($cols[4])) === 'substitusi' ? 'substitusi' : 'wajib';
+                $jumlah   = is_numeric(trim($cols[5])) ? (int)trim($cols[5]) : 0;
+                $group    = trim($cols[6]) ?: $group;
+                $kategori = isset($cols[7]) ? trim($cols[7]) : '';
+
+                $parsedItems[] = [
+                    $noLayanan,
+                    $namaLayanan,
+                    $strata,
+                    $kode,
+                    $nama,
+                    $kel,
+                    $status,
+                    $jumlah,
+                    $group,
+                    $kategori
+                ];
+                continue;
+            }
+
+            // 4. Fallback jika kolom fleksibel / custom
             if (count($cols) >= 4) {
-                // If column contains strata
                 foreach ($cols as $c) {
                     $cl = strtolower(trim($c));
                     if (in_array($cl, ['dasar', 'madya', 'utama', 'paripurna'])) {
@@ -130,9 +192,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (in_array($cl, ['wajib', 'substitusi'])) {
                         $status = $cl;
                     }
+                    if (preg_match('/^k(sdm|alkes|sarana)\d+/i', $cl)) {
+                        $group = strtolower($cl);
+                    }
+                    if (in_array($cl, ['alat kesehatan', 'sarana', 'sdm medis'])) {
+                        $kel = ucwords($cl);
+                    }
                 }
-                $nama = trim($cols[1] ?? $cols[2] ?? $cols[0]);
-                if (isset($cols[2]) && preg_match('/^\d+$/', trim($cols[2]))) $kode = trim($cols[2]);
+                $reserved = ['dasar', 'madya', 'utama', 'paripurna', 'wajib', 'substitusi', 'sdm medis', 'alat kesehatan', 'sarana'];
+                foreach ($cols as $idx => $c) {
+                    $cl = strtolower(trim($c));
+                    if ($idx > 0 && strlen($cl) > 2 && !is_numeric($cl) && !in_array($cl, $reserved) && !preg_match('/^k(sdm|alkes|sarana)\d+/i', $cl)) {
+                        $nama = trim($c);
+                        if ($idx > 1 && is_numeric(trim($cols[$idx - 1]))) {
+                            $kode = trim($cols[$idx - 1]);
+                        }
+                        break;
+                    }
+                }
+                if (!$nama) {
+                    $nama = trim($cols[2] ?? $cols[1] ?? $cols[0]);
+                }
                 if (isset($cols[count($cols)-1]) && is_numeric(trim($cols[count($cols)-1]))) {
                     $jumlah = (int)trim($cols[count($cols)-1]);
                 }
@@ -149,7 +229,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $kel,
                 $status,
                 $jumlah,
-                $group
+                $group,
+                ''
             ];
         }
 
@@ -222,126 +303,235 @@ $targetImportUrl = appUrl('/master/sinkronisasi?import_clipboard=1');
 $targetSimrsUrl  = appUrl('/master/sinkronisasi');
 
 // Bookmarklet JS: menarik semua 24 layanan dengan group unik per item
-// PENTING: pakai textContent bukan innerText - DOMParser tidak punya layout jadi innerText selalu kosong!
-$bookmarkletUrl = "javascript:(function(){"
-    . "var b='https://sirs.kemkes.go.id/fo/dashboard';"
-    . "var s=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24];"
-    . "var LAYANAN=['','Jantung dan Pembuluh Darah','Paru dan Pernafasan','Uro Nefro','Neonatus','Neoplasma','Ibu dan Ginekologi','Muskuloskeletal dan Jaringan Lunak','THT','Mata','Kulit dan Penyakit Kelamin','Saraf','Infeksi dan Parasit','Pencernaan dan Hepatobilier','Hematologi','Alergi Imunologi dan Rheumatologi','Rekonstruksi dan Estetika','Keracunan','Endokrin, Nutrisi dan Metabolik','Luka Bakar','Trauma','Jiwa','Gigi dan Mulut','Forensik','Rehabilitasi'];"
-    . "var all=[];var done=0;var total=s.length*2;"
-    . "var box=document.createElement('div');"
-    . "box.style.cssText='position:fixed;top:20px;right:20px;z-index:999999;background:#0d6b5a;color:#fff;padding:16px 22px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.35);font-family:sans-serif;font-size:14px;min-width:320px;line-height:1.6;';"
-    . "box.innerHTML='<b>&#9889; Menarik Semua 24 Layanan SIRS...</b><br><span id=sp>Menginisialisasi...</span>';"
-    . "document.body.appendChild(box);"
-    . "function txt(el){return(el.textContent||'').trim();}"
-    . "function upd(){var e=document.getElementById('sp');if(e)e.textContent=done+'/'+total+' komponen selesai | '+all.length+' baris terkumpul';}"
-    . "function finish(){"
-    .   "box.style.background='#16a34a';"
-    .   "box.innerHTML='<b>&#10003; Selesai mengumpulkan '+all.length+' baris!</b><br>Mengirim ke SIMRS...';"
-    .   "fetch('" . addslashes($targetApiUrl) . "',{method:'POST',mode:'cors',headers:{'Content-Type':'application/json'},"
-    .     "body:JSON.stringify({items:all,snapshot_name:'Tarik Otomatis 24 Layanan SIRS '+new Date().toLocaleDateString('id-ID')+' '+new Date().toLocaleTimeString('id-ID'),periode:new Date().toISOString().slice(0,10)})})"
-    .   ".then(function(r){return r.json();})"
-    .   ".then(function(res){"
-    .     "box.innerHTML='<b>&#10004; SUKSES DISIMPAN!</b><br>'+res.message+'<br><small><a href=\"" . addslashes($targetSimrsUrl) . "\" target=\"_blank\" style=\"color:#fff;text-decoration:underline;\">&#128279; Buka Hasil di SIMRS</a></small>';"
-    .     "setTimeout(function(){box.remove();},10000);"
-    .   "})"
-    .   ".catch(function(){"
-    .     "var payload=JSON.stringify({items:all,snapshot_name:'Tarik Otomatis 24 Layanan SIRS '+new Date().toLocaleDateString('id-ID')+' '+new Date().toLocaleTimeString('id-ID'),periode:new Date().toISOString().slice(0,10)});"
-    .     "box.style.background='#d97706';"
-    .     "if(navigator.clipboard&&navigator.clipboard.writeText){"
-    .       "navigator.clipboard.writeText(payload).then(function(){"
-    .         "box.innerHTML='<b>&#128203; '+all.length+' baris di-copy ke Clipboard!</b><br><small>Data siap dimasukkan ke SIMRS.<br>Klik tombol di bawah untuk import otomatis:</small><br><br><a href=\"" . addslashes($targetImportUrl) . "\" target=\"_blank\" style=\"display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:8px 16px;border-radius:6px;font-size:14px;font-weight:bold;\">&#128279; Buka SIMRS &amp; Import</a>';"
-    .       "}).catch(function(){"
-    .         "box.innerHTML='<b>Data siap ('+all.length+' baris)</b><br><small>Clipboard tidak tersedia. Salin URL berikut:<br></small><input readonly value=\"" . addslashes($targetImportUrl) . "\" style=\"width:100%;font-size:11px;\">';"
-    .       "});"
-    .     "}else{"
-    .       "box.innerHTML='<b>Data siap ('+all.length+' baris)</b><br><small>Buka SIMRS dan import dari clipboard.</small><br><br><a href=\"" . addslashes($targetImportUrl) . "\" target=\"_blank\" style=\"display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:8px 16px;border-radius:6px;\">Buka SIMRS</a>';"
-    .     "}"
-    .   "});"
-    . "}"
-    . "function fetchKomp(no,k){"
-    .   "var url=b+'/'+(k==='SDM'?'sdm_detil':'alkessarana_detil')+'/'+no;"
-    .   "fetch(url)"
-    .   ".then(function(r){return r.text();})"
-    .   ".then(function(html){"
-    .     "var doc=new DOMParser().parseFromString(html,'text/html');"
-    .     "var nm=LAYANAN[no]||('Layanan '+no);"
-    .     "var curStrata='Dasar';"
-    .     "var colMap={no:0,strata:1,nama:2,kelompok:3,status:4,jumlah:5,group:6};"
-    .     "var ths=doc.querySelectorAll('table thead th, table tr th');"
-    .     "if(ths.length>=4){"
-    .       "var found={};"
-    .       "ths.forEach(function(th,idx){"
-    .         "var h=txt(th).toLowerCase().replace(/[^a-z0-9]/g,'');"
-    .         "if((h==='no'||h==='nomor')&&found.no===undefined)found.no=idx;"
-    .         "else if(h==='strata'&&found.strata===undefined)found.strata=idx;"
-    .         "else if((h.indexOf('nama')>=0||h==='item'||h==='alat'||h==='sarana'||h==='komponen')&&found.nama===undefined)found.nama=idx;"
-    .         "else if((h.indexOf('kelompok')>=0||h==='kategori')&&found.kelompok===undefined)found.kelompok=idx;"
-    .         "else if((h==='status'||h==='sifat')&&found.status===undefined)found.status=idx;"
-    .         "else if((h.indexOf('jumlah')>=0||h==='jml'||h==='qty')&&found.jumlah===undefined)found.jumlah=idx;"
-    .         "else if((h.indexOf('group')>=0||h.indexOf('grup')>=0)&&found.group===undefined)found.group=idx;"
-    .       "});"
-    .       "if(found.nama!==undefined&&found.status!==undefined)colMap=found;"
-    .     "}"
-    .     "var trs=doc.querySelectorAll('table tr');"
-    .     "var cnt=0;"
-    .     "trs.forEach(function(tr){"
-    .       "var tds=tr.querySelectorAll('td');"
-    .       "if(tds.length<3)return;"
-    .       "var cells=[];"
-    .       "tds.forEach(function(td){cells.push(txt(td));});"
-    .       "var fst=(cells[0]||'').toLowerCase();"
-    .       "if(fst==='no'||fst==='no.'||fst==='nomor')return;"
-    .       "var rawStrata=colMap.strata!==undefined&&cells[colMap.strata]?cells[colMap.strata]:'';"
-    .       "var rawNama=colMap.nama!==undefined&&cells[colMap.nama]?cells[colMap.nama]:(cells[2]||cells[1]||'');"
-    .       "var rawKel=colMap.kelompok!==undefined&&cells[colMap.kelompok]?cells[colMap.kelompok]:(cells[3]||'');"
-    .       "var rawStat=colMap.status!==undefined&&cells[colMap.status]?cells[colMap.status]:(cells[4]||'');"
-    .       "var rawJml=colMap.jumlah!==undefined&&cells[colMap.jumlah]?cells[colMap.jumlah]:(cells[5]||'0');"
-    .       "var rawGrp=colMap.group!==undefined&&cells[colMap.group]?cells[colMap.group]:(cells[6]||'');"
-    .       "var strata=curStrata;"
-    .       "var sl=rawStrata.toLowerCase();"
-    .       "if(['dasar','madya','utama','paripurna'].indexOf(sl)>=0){"
-    .         "strata=sl.charAt(0).toUpperCase()+sl.slice(1);"
-    .         "curStrata=strata;"
-    .       "}"
-    .       "var nama=rawNama.trim();"
-    .       "if(['dasar','madya','utama','paripurna'].indexOf(nama.toLowerCase())>=0){"
-    .         "for(var c=0;c<cells.length;c++){"
-    .           "var ct=cells[c].trim();"
-    .           "if(ct.length>3&&['dasar','madya','utama','paripurna','sdm','sdm medis','alat kesehatan','sarana','wajib','substitusi'].indexOf(ct.toLowerCase())<0&&!/^\\d+$/.test(ct)){"
-    .             "nama=ct;break;"
-    .           "}"
-    .         "}"
-    .       "}"
-    .       "if(!nama||nama.length<2)return;"
-    .       "var kel=rawKel.trim();"
-    .       "if(!kel){kel=k==='SDM'?'SDM Medis':'Alat Kesehatan';}"
-    .       "else{"
-    .         "var kl=kel.toLowerCase();"
-    .         "if(kl.indexOf('sarana')>=0)kel='Sarana';"
-    .         "else if(kl.indexOf('alat')>=0||kl.indexOf('alkes')>=0)kel='Alat Kesehatan';"
-    .         "else if(kl.indexOf('sdm')>=0)kel='SDM Medis';"
-    .       "}"
-    .       "var status='wajib';"
-    .       "var stl=rawStat.toLowerCase();"
-    .       "if(stl.indexOf('substitusi')>=0)status='substitusi';"
-    .       "else if(stl.indexOf('wajib')>=0)status='wajib';"
-    .       "var jumlah=0;"
-    .       "var jn=parseInt(rawJml.replace(/[^\\d]/g,''),10);"
-    .       "if(!isNaN(jn))jumlah=jn;"
-    .       "cnt++;"
-    .       "var group=rawGrp.trim().toLowerCase();"
-    .       "if(!group||!/^k(sdm|alkes|sarana)\\d+/i.test(group)){"
-    .         "var pfx=kel==='SDM Medis'?'ksdm':(kel==='Sarana'?'ksarana':'kalkes');"
-    .         "group=pfx+(cnt<10?'0':'')+cnt;"
-    .       "}"
-    .       "all.push([no,nm,strata,'',nama,kel,status,jumlah,group]);"
-    .     "});"
-    .     "done++;upd();if(done===total)finish();"
-    .   "})"
-    .   ".catch(function(e){done++;upd();if(done===total)finish();});"
-    . "}"
-    . "s.forEach(function(n){setTimeout(function(){fetchKomp(n,'SDM');fetchKomp(n,'Alkes');},n*250);});"
-    . "})();";
+// PENTING:
+// 1. Pakai textContent bukan innerText (DOMParser tidak punya layout engine jadi innerText selalu kosong)
+// 2. Gunakan rgb(...) bukan hex (#) agar tidak terpotong oleh parser URL browser (# dianggap hash fragment).
+// 3. TIDAK MENGGUNAKAN rawurlencode karena browser JS engine melempar SyntaxError pada %28 %29.
+// 4. Deteksi lokasi: jika dijalankan bukan di situs kemkes.go.id, beri peringatan jelas & buka tab SIRS.
+$rawJsTemplate = <<<'JS'
+(function(){
+  try {
+    if (!location.hostname || location.hostname.indexOf('kemkes.go.id') < 0) {
+      alert("⚠️ PERHATIAN:\n\nBookmarklet ini harus dijalankan saat tab browser Anda berada di situs SIRS RS Online (sirs.kemkes.go.id)!\n\nSaat ini Anda berada di: " + (location.hostname || 'halaman lokal') + "\n\nSistem akan membuka portal SIRS Kemenkes untuk Anda.");
+      window.open('https://sirs.kemkes.go.id/fo/dashboard', '_blank');
+      return;
+    }
+
+    var b = location.origin + '/fo/dashboard';
+    var s = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24];
+    var LAYANAN = ['', 'Jantung dan Pembuluh Darah', 'Paru dan Pernafasan', 'Uro Nefro', 'Neonatus', 'Neoplasma', 'Ibu dan Ginekologi', 'Muskuloskeletal dan Jaringan Lunak', 'THT', 'Mata', 'Kulit dan Penyakit Kelamin', 'Saraf', 'Infeksi dan Parasit', 'Pencernaan dan Hepatobilier', 'Hematologi', 'Alergi Imunologi dan Rheumatologi', 'Rekonstruksi dan Estetika', 'Keracunan', 'Endokrin, Nutrisi dan Metabolik', 'Luka Bakar', 'Trauma', 'Jiwa', 'Gigi dan Mulut', 'Forensik', 'Rehabilitasi'];
+    var all = [];
+    var done = 0;
+    var total = s.length * 2;
+
+    var oldBox = document.getElementById('sirs-sync-box');
+    if (oldBox) oldBox.remove();
+
+    var box = document.createElement('div');
+    box.id = 'sirs-sync-box';
+    box.style.cssText = 'position:fixed;top:20px;right:20px;z-index:2147483647;background:rgb(13,107,90);color:white;padding:16px 20px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.5);font-family:sans-serif;font-size:13.5px;min-width:320px;max-width:440px;line-height:1.5;box-sizing:border-box;';
+
+    box.onclick = function(e) {
+      if (e.target && (e.target.getAttribute('data-close') === '1' || (e.target.parentElement && e.target.parentElement.getAttribute('data-close') === '1'))) {
+        box.remove();
+      }
+    };
+
+    function renderBox(title, content, bgColor) {
+      if (bgColor) box.style.background = bgColor;
+      box.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><b style="font-size:14px;">' + title + '</b><button type="button" data-close="1" style="background:rgba(255,255,255,0.25);border:none;color:white;font-size:16px;width:26px;height:26px;border-radius:50%;cursor:pointer;line-height:1;margin-left:8px;display:inline-flex;align-items:center;justify-content:center;" title="Tutup">&times;</button></div>' + content;
+    }
+
+    renderBox('⚡ Menarik 24 Layanan SIRS...', '<div id="sirs-sp">Menginisialisasi koneksi...</div><div style="font-size:11px;opacity:0.85;margin-top:4px;">Mohon jangan tutup tab ini sampai proses selesai.</div>');
+    document.body.appendChild(box);
+
+    function txt(el) { return (el ? el.textContent || '' : '').trim(); }
+    function upd() {
+      var e = document.getElementById('sirs-sp');
+      if (e) e.textContent = done + '/' + total + ' komponen selesai | ' + all.length + ' baris terkumpul';
+    }
+
+    function finish() {
+      renderBox('✓ Selesai ' + all.length + ' Baris!', 'Mengirim data ke SIMRS...', 'rgb(22,163,74)');
+      var targetApi = '{{TARGET_API_URL}}';
+      var targetSimrs = '{{TARGET_SIMRS_URL}}';
+      var targetImport = '{{TARGET_IMPORT_URL}}';
+      var payload = JSON.stringify({
+        items: all,
+        snapshot_name: 'Tarik Otomatis 24 Layanan SIRS ' + new Date().toLocaleDateString('id-ID') + ' ' + new Date().toLocaleTimeString('id-ID'),
+        periode: new Date().toISOString().slice(0, 10)
+      });
+
+      fetch(targetApi, {
+        method: 'POST',
+        mode: 'cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        renderBox('✔ SUKSES DISIMPAN!', res.message + '<div style="margin-top:12px;display:flex;gap:8px;"><a href="' + targetSimrs + '" target="_blank" style="background:white;color:rgb(22,163,74);padding:7px 14px;border-radius:6px;font-size:12px;text-decoration:none;font-weight:bold;">🔗 Buka Hasil di SIMRS</a><button type="button" data-close="1" style="background:rgba(255,255,255,0.25);border:none;color:white;padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12px;">Tutup</button></div>', 'rgb(22,163,74)');
+        setTimeout(function() { if (box && box.parentElement) box.remove(); }, 15000);
+      })
+      .catch(function(err) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(payload).then(function() {
+            renderBox('📋 ' + all.length + ' Baris di-Copy ke Clipboard!', '<small>Data berhasil disalin. Buka SIMRS untuk langsung simpan snapshot.</small><div style="margin-top:12px;display:flex;gap:8px;"><a href="' + targetImport + '" target="_blank" style="background:rgb(22,163,74);color:white;text-decoration:none;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:bold;">🔗 Buka SIMRS &amp; Simpan</a><button type="button" data-close="1" style="background:rgba(255,255,255,0.25);border:none;color:white;padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12px;">Tutup</button></div>', 'rgb(217,119,6)');
+          }).catch(function() {
+            renderBox('Data Siap (' + all.length + ' baris)', '<div style="margin-top:8px;"><a href="' + targetImport + '" target="_blank" style="background:white;color:rgb(217,119,6);text-decoration:none;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:bold;">Buka SIMRS</a><button type="button" data-close="1" style="margin-left:6px;background:rgba(255,255,255,0.25);border:none;color:white;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;">Tutup</button></div>', 'rgb(217,119,6)');
+          });
+        } else {
+          renderBox('Data Siap (' + all.length + ' baris)', '<div style="margin-top:8px;"><a href="' + targetImport + '" target="_blank" style="background:white;color:rgb(217,119,6);text-decoration:none;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:bold;">Buka SIMRS</a><button type="button" data-close="1" style="margin-left:6px;background:rgba(255,255,255,0.25);border:none;color:white;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;">Tutup</button></div>', 'rgb(217,119,6)');
+        }
+      });
+    }
+
+    function fetchKomp(no, k) {
+      var url = b + '/' + (k === 'SDM' ? 'sdm_detil' : 'alkessarana_detil') + '/' + no;
+      fetch(url)
+        .then(function(r) { return r.text(); })
+        .then(function(html) {
+          var doc = new DOMParser().parseFromString(html, 'text/html');
+          var nm = LAYANAN[no] || ('Layanan ' + no);
+          var curStrata = 'Dasar';
+          var colMap = (k === 'Alkes') ?
+            { no: 0, strata: 1, kode: 2, nama: 3, kelompok: 4, status: 5, jumlah: 6, group: 7 } :
+            { no: 0, strata: 1, nama: 2, kelompok: 3, status: 4, jumlah: 5, group: 6, kategori: 7 };
+
+          var ths = doc.querySelectorAll('table thead th, table tr th');
+          if (ths.length >= 4) {
+            var found = {};
+            ths.forEach(function(th, idx) {
+              var h = txt(th).toLowerCase().replace(/[^a-z0-9]/g, '');
+              if ((h === 'no' || h === 'nomor') && found.no === undefined) found.no = idx;
+              else if (h === 'strata' && found.strata === undefined) found.strata = idx;
+              else if ((h === 'kode' || h === 'kodealat' || h === 'kodesarana' || h === 'kd') && found.kode === undefined) found.kode = idx;
+              else if ((h.indexOf('nama') >= 0 || h === 'item' || h === 'alat' || h === 'sarana' || h === 'komponen') && found.nama === undefined) found.nama = idx;
+              else if ((h.indexOf('nakes') >= 0 || h.indexOf('spesifikasi') >= 0 || h === 'kategorinakes') && found.kategori === undefined) found.kategori = idx;
+              else if ((h.indexOf('kelompok') >= 0 || h === 'kategori') && found.kelompok === undefined) found.kelompok = idx;
+              else if ((h === 'status' || h === 'sifat') && found.status === undefined) found.status = idx;
+              else if ((h.indexOf('jumlah') >= 0 || h === 'jml' || h === 'qty') && found.jumlah === undefined) found.jumlah = idx;
+              else if ((h.indexOf('group') >= 0 || h.indexOf('grup') >= 0) && found.group === undefined) found.group = idx;
+            });
+            if (found.nama !== undefined && found.status !== undefined) colMap = found;
+          }
+
+          var trs = doc.querySelectorAll('table tr');
+          var cnt = 0;
+          trs.forEach(function(tr) {
+            var tds = tr.querySelectorAll('td');
+            if (tds.length < 3) return;
+            var cells = [];
+            tds.forEach(function(td) { cells.push(txt(td)); });
+
+            var fst = (cells[0] || '').toLowerCase();
+            if (fst === 'no' || fst === 'no.' || fst === 'nomor') return;
+
+            var rawStrata = (colMap.strata !== undefined && cells[colMap.strata]) ? cells[colMap.strata] : '';
+            var rawKode = (colMap.kode !== undefined && cells[colMap.kode]) ? cells[colMap.kode] : (k === 'Alkes' && cells.length >= 8 ? cells[2] : '');
+            var rawNama = (colMap.nama !== undefined && cells[colMap.nama]) ? cells[colMap.nama] : (k === 'Alkes' && cells.length >= 8 ? cells[3] : (cells[2] || cells[1] || ''));
+            var rawKel = (colMap.kelompok !== undefined && cells[colMap.kelompok]) ? cells[colMap.kelompok] : (k === 'Alkes' && cells.length >= 8 ? cells[4] : (cells[3] || ''));
+            var rawStat = (colMap.status !== undefined && cells[colMap.status]) ? cells[colMap.status] : (k === 'Alkes' && cells.length >= 8 ? cells[5] : (cells[4] || ''));
+            var rawJml = (colMap.jumlah !== undefined && cells[colMap.jumlah]) ? cells[colMap.jumlah] : (k === 'Alkes' && cells.length >= 8 ? cells[6] : (cells[5] || '0'));
+            var rawGrp = (colMap.group !== undefined && cells[colMap.group]) ? cells[colMap.group] : (k === 'Alkes' && cells.length >= 8 ? cells[7] : (cells[6] || ''));
+            var rawKat = (colMap.kategori !== undefined && cells[colMap.kategori]) ? cells[colMap.kategori] : (cells[7] || '');
+
+            var strata = curStrata;
+            var sl = rawStrata.toLowerCase();
+            if (['dasar', 'madya', 'utama', 'paripurna'].indexOf(sl) >= 0) {
+              strata = sl.charAt(0).toUpperCase() + sl.slice(1);
+              curStrata = strata;
+            }
+
+            var kode = rawKode.trim();
+            var nama = rawNama.trim();
+
+            if (/^[0-9]+$/.test(nama) && cells.length >= 4) {
+              kode = nama;
+              for (var c = 2; c < cells.length; c++) {
+                var ct = cells[c].trim();
+                if (ct.length > 2 && !/^[0-9]+$/.test(ct) && ['dasar', 'madya', 'utama', 'paripurna', 'alat kesehatan', 'sarana', 'wajib', 'substitusi'].indexOf(ct.toLowerCase()) < 0) {
+                  nama = ct;
+                  break;
+                }
+              }
+            }
+
+            if (['dasar', 'madya', 'utama', 'paripurna'].indexOf(nama.toLowerCase()) >= 0) {
+              for (var c2 = 0; c2 < cells.length; c2++) {
+                var ct2 = cells[c2].trim();
+                if (ct2.length > 3 && ['dasar', 'madya', 'utama', 'paripurna', 'sdm', 'sdm medis', 'alat kesehatan', 'sarana', 'wajib', 'substitusi'].indexOf(ct2.toLowerCase()) < 0 && !/^[0-9]+$/.test(ct2)) {
+                  nama = ct2;
+                  break;
+                }
+              }
+            }
+
+            if (!nama || nama.length < 2) return;
+
+            var kel = rawKel.trim();
+            if (!kel) {
+              kel = (k === 'SDM') ? 'SDM Medis' : 'Alat Kesehatan';
+            } else {
+              var kl = kel.toLowerCase();
+              if (kl.indexOf('sarana') >= 0) kel = 'Sarana';
+              else if (kl.indexOf('alat') >= 0 || kl.indexOf('alkes') >= 0) kel = 'Alat Kesehatan';
+              else if (kl.indexOf('sdm') >= 0) kel = 'SDM Medis';
+            }
+
+            var status = 'wajib';
+            var stl = rawStat.toLowerCase();
+            if (stl.indexOf('substitusi') >= 0) status = 'substitusi';
+            else if (stl.indexOf('wajib') >= 0) status = 'wajib';
+
+            var jumlah = 0;
+            var jn = parseInt(rawJml.replace(/[^0-9]/g, ''), 10);
+            if (!isNaN(jn)) jumlah = jn;
+
+            cnt++;
+            var group = rawGrp.trim().toLowerCase();
+            if (!group || !/^k(sdm|alkes|sarana)[0-9]+/i.test(group)) {
+              var pfx = (kel === 'SDM Medis') ? 'ksdm' : (kel === 'Sarana' ? 'ksarana' : 'kalkes');
+              group = pfx + (cnt < 10 ? '0' : '') + cnt;
+            }
+
+            var kat = rawKat.trim();
+            all.push([no, nm, strata, kode, nama, kel, status, jumlah, group, kat]);
+          });
+
+          done++;
+          upd();
+          if (done === total) finish();
+        })
+        .catch(function(err) {
+          done++;
+          upd();
+          if (done === total) finish();
+        });
+    }
+
+    s.forEach(function(n) {
+      setTimeout(function() {
+        fetchKomp(n, 'SDM');
+        fetchKomp(n, 'Alkes');
+      }, n * 250);
+    });
+
+  } catch (globalErr) {
+    alert('Terjadi kesalahan bookmarklet: ' + globalErr.message);
+  }
+})();
+JS;
+
+$rawJs = str_replace(
+    ['{{TARGET_API_URL}}', '{{TARGET_SIMRS_URL}}', '{{TARGET_IMPORT_URL}}'],
+    [$targetApiUrl, $targetSimrsUrl, $targetImportUrl],
+    $rawJsTemplate
+);
+
+// Single line minification for bookmarklet link (no newlines)
+$minJs = preg_replace('/\s+/', ' ', trim($rawJs));
+$bookmarkletUrl = "javascript:" . $minJs;
 
 ob_start();
 ?>
@@ -371,30 +561,45 @@ ob_start();
         <div>
           <h2 style="font-size:16px; font-weight:700; margin-bottom:4px;">Otomasi Tarik Data di Belakang Layar (Background Ingestion)</h2>
           <p class="text-muted" style="font-size:13px; max-width:720px;">
-            Anda tidak perlu mengetik manual. Tersedia 2 opsi otomatis:
+            Anda tidak perlu menyalin tabel satu per satu. Gunakan salah satu metode berikut:
             <br>
-            <strong>1. Bookmarklet 1-Klik di SIRS</strong>: Tarik ke bookmark browser Anda tombol di sebelah kanan. Saat membuka halaman detil di SIRS Kemenkes, cukup klik bookmark tersebut sekali maka data tabel langsung terkirim otomatis ke sistem ini!
+            <strong>1. Bookmarklet 1-Klik di SIRS</strong>: Pasang script di Bookmark browser atau salin kodenya. Saat membuka portal SIRS Kemenkes, klik bookmarklet maka sistem otomatis mengunduh ke-24 layanan sekaligus di latar belakang!
             <br>
-            <strong>1. Bookmarklet 1-Klik Otomatis Semua 24 Layanan</strong>: Tarik tombol kuning di sebelah kanan ke Bookmarks Bar browser Anda. Saat membuka SIRS Kemenkes, klik bookmarklet tersebut sekali. Script akan bekerja di belakang layar mengunduh seluruh 24 layanan (SDM & Alkes) secara otomatis sekaligus dan mengirimkannya ke sistem ini!
+            <strong>2. Jalankan di Console SIRS (Anti-Gagal)</strong>: Salin script bookmarklet, buka situs SIRS Kemenkes, tekan <kbd>F12</kbd> &rarr; tab <strong>Console</strong>, lalu tekan <kbd>Ctrl+V</kbd> &amp; <kbd>Enter</kbd>.
             <br>
-            <strong>2. Tombol Tempel Otomatis</strong>: Jika menyalin tabel dari SIRS, klik <em>"Tarik Data"</em> lalu gunakan <em>"⚡ Ambil Otomatis dari Clipboard"</em>.
+            <strong>3. Tombol Tempel Otomatis</strong>: Jika menyalin tabel dari SIRS secara manual, klik <em>"Tarik Data"</em> lalu gunakan <em>"⚡ Ambil Otomatis dari Clipboard"</em>.
           </p>
         </div>
       </div>
 
       <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
-        <!-- Draggable All-Services Bookmarklet -->
-        <a 
-          href="<?= htmlspecialchars($bookmarkletUrl) ?>" 
-          class="btn btn-warning" 
-          title="Tarik tombol ini ke Bookmarks Bar browser Anda untuk menarik semua 24 layanan otomatis!"
-          onclick="alert('Tarik (drag & drop) tombol ini ke Bookmarks Bar browser Anda!\n\nSaat berada di situs RS Online/SIRS, klik bookmark ini SEKALI. Sistem otomatis menarik SELURUH 24 Layanan (SDM & Alkes) di belakang layar tanpa perlu klik 1 per 1!'); return false;"
-        >
-          <i data-lucide="zap"></i> ⚡ Bookmarklet Tarik Semua 24 Layanan (1-Klik)
-        </a>
-        <span class="text-muted fs-12">(Tarik tombol ke Bookmarks Bar browser Anda)</span>
-        <div style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px; margin-top:4px;">
-          <span>Target SIMRS:</span>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+          <!-- 1-Click Copy Script Button -->
+          <button 
+            type="button" 
+            class="btn btn-primary" 
+            onclick="copyBookmarkletScript()"
+            title="Salin script bookmarklet ke clipboard (bisa dipaste di Bookmark Bar atau di Console SIRS)"
+          >
+            <i data-lucide="copy"></i> 📋 Salin Script Bookmarklet
+          </button>
+
+          <!-- Draggable Link Button -->
+          <a 
+            href="<?= htmlspecialchars($bookmarkletUrl, ENT_QUOTES, 'UTF-8') ?>" 
+            class="btn btn-warning" 
+            title="Tarik tombol ini ke Bookmarks Bar browser Anda!"
+            onclick="openBookmarkletHelp(); return false;"
+          >
+            <i data-lucide="zap"></i> ⚡ Bookmarklet 24 Layanan
+          </a>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:8px; font-size:12px; margin-top:2px;">
+          <button type="button" class="btn btn-sm btn-ghost" onclick="openBookmarkletHelp()" style="padding:2px 8px; font-size:12px; color:var(--primary);">
+            <i data-lucide="help-circle"></i> Panduan Cara Pakai
+          </button>
+          <span class="text-muted">Target SIMRS:</span>
           <code style="background:var(--bg-input); border:1px solid var(--border); padding:2px 8px; border-radius:6px; font-weight:600; color:var(--primary);"><?= e(appUrl()) ?></code>
         </div>
       </div>
@@ -645,7 +850,7 @@ ob_start();
   <div class="modal" style="max-width:640px;">
     <div class="modal-header">
       <h3 class="modal-title" id="tarikModalTitle">Tarik Data dari SIRS Kemenkes</h3>
-      <button class="modal-close" onclick="closeTarikModal()">&times;</button>
+      <button type="button" class="modal-close" onclick="closeTarikModal()" title="Tutup Modal" aria-label="Tutup">&times;</button>
     </div>
     <form method="POST" action="/master/sinkronisasi/tarik-sirs">
       <?= Csrf::field() ?>
@@ -706,7 +911,9 @@ ob_start();
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="closeTarikModal()">Batal</button>
+        <button type="button" class="btn btn-secondary" onclick="closeTarikModal()">
+          <i data-lucide="x"></i> Tutup
+        </button>
         <button type="submit" class="btn btn-primary">
           <i data-lucide="check"></i> Proses & Simpan Tarikan
         </button>
@@ -715,7 +922,119 @@ ob_start();
   </div>
 </div>
 
+<!-- ─── MODAL PANDUAN & SCRIPT BOOKMARKLET ──────────────────────────────────── -->
+<div class="modal-backdrop" id="bookmarkletHelpModal">
+  <div class="modal" style="max-width:680px;">
+    <div class="modal-header">
+      <h3 class="modal-title">
+        <i data-lucide="zap" style="color:var(--warning); vertical-align:middle;"></i> Panduan &amp; Script Tarik 24 Layanan Otomatis
+      </h3>
+      <button type="button" class="modal-close" onclick="closeBookmarkletHelp()" title="Tutup Modal" aria-label="Tutup">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:rgba(22,163,74,0.08); border:1px solid rgba(22,163,74,0.25); border-radius:8px; padding:12px 16px; margin-bottom:16px;">
+        <strong style="color:rgb(22,163,74); display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+          <i data-lucide="check-circle" style="width:16px;height:16px;"></i> Cara 1 (Paling Cepat &amp; Anti-Gagal 100%): Lewat Console SIRS
+        </strong>
+        <ol style="margin:6px 0 0 18px; padding:0; font-size:13px; line-height:1.6;">
+          <li>Klik tombol <strong>"Salin Script"</strong> di bawah.</li>
+          <li>Buka situs portal SIRS Kemenkes: <a href="https://sirs.kemkes.go.id/fo/dashboard" target="_blank" style="font-weight:600; text-decoration:underline;">sirs.kemkes.go.id/fo/dashboard</a></li>
+          <li>Tekan tombol <kbd>F12</kbd> (atau klik kanan &rarr; <em>Inspect</em>) &rarr; pilih tab <strong>Console</strong>.</li>
+          <li>Tekan <kbd>Ctrl+V</kbd> (Paste) lalu tekan <kbd>Enter</kbd>.</li>
+          <li>Kotak status warna hijau/emas akan muncul di pojok kanan atas SIRS dan menarik otomatis seluruh 24 Layanan!</li>
+        </ol>
+      </div>
+
+      <div style="background:rgba(59,110,240,0.08); border:1px solid rgba(59,110,240,0.25); border-radius:8px; padding:12px 16px; margin-bottom:16px;">
+        <strong style="color:var(--primary); display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+          <i data-lucide="bookmark" style="width:16px;height:16px;"></i> Cara 2: Pasang Manual di Bookmark Bar Browser
+        </strong>
+        <ol style="margin:6px 0 0 18px; padding:0; font-size:13px; line-height:1.6;">
+          <li>Klik tombol <strong>"Salin Script"</strong> di bawah.</li>
+          <li>Pada Bookmarks Bar browser Anda, klik kanan &rarr; pilih <strong>Add page / Tambah halaman</strong>.</li>
+          <li>Beri Nama: <code>⚡ Tarik SIMRS</code>.</li>
+          <li>Pada kolom <strong>URL</strong>, tempelkan (Ctrl+V) script yang sudah disalin, lalu klik <strong>Save / Simpan</strong>.</li>
+          <li>Buka situs SIRS, lalu klik bookmark tersebut 1 kali!</li>
+        </ol>
+      </div>
+
+      <div class="form-group" style="margin-bottom:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <label class="form-label" style="margin:0; font-weight:600;">Kode Script Bookmarklet:</label>
+          <button type="button" class="btn btn-sm btn-primary" onclick="copyBookmarkletScript()">
+            <i data-lucide="copy"></i> Salin Script ke Clipboard
+          </button>
+        </div>
+        <textarea 
+          id="bookmarkletRawCode" 
+          class="form-control" 
+          rows="5" 
+          readonly 
+          style="font-family:monospace; font-size:11.5px; background:var(--bg-input); word-break:break-all;"
+        ><?= e($bookmarkletUrl) ?></textarea>
+      </div>
+      <div id="copySuccessAlert" style="display:none; color:rgb(22,163,74); font-size:12.5px; font-weight:600; margin-top:4px;">
+        ✓ Kode script bookmarklet berhasil disalin ke clipboard!
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" onclick="closeBookmarkletHelp()">
+        <i data-lucide="x"></i> Tutup
+      </button>
+      <button type="button" class="btn btn-primary" onclick="copyBookmarkletScript()">
+        <i data-lucide="copy"></i> Salin Script
+      </button>
+      <a href="https://sirs.kemkes.go.id/fo/dashboard" target="_blank" rel="noopener noreferrer" class="btn btn-warning">
+        <i data-lucide="external-link"></i> Buka Portal SIRS
+      </a>
+    </div>
+  </div>
+</div>
+
 <script>
+  function openBookmarkletHelp() {
+    document.getElementById('bookmarkletHelpModal').classList.add('open');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function closeBookmarkletHelp() {
+    document.getElementById('bookmarkletHelpModal').classList.remove('open');
+  }
+
+  document.getElementById('bookmarkletHelpModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeBookmarkletHelp();
+  });
+
+  function copyBookmarkletScript() {
+    const ta = document.getElementById('bookmarkletRawCode');
+    const text = ta ? ta.value : '';
+    if (!text) return;
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function() {
+        showCopySuccess();
+      }).catch(function() {
+        ta.select();
+        document.execCommand('copy');
+        showCopySuccess();
+      });
+    } else {
+      ta.select();
+      document.execCommand('copy');
+      showCopySuccess();
+    }
+  }
+
+  function showCopySuccess() {
+    const alertBox = document.getElementById('copySuccessAlert');
+    if (alertBox) {
+      alertBox.style.display = 'block';
+      setTimeout(function() { alertBox.style.display = 'none'; }, 4000);
+    }
+    alert("✅ Kode Script Bookmarklet BERHASIL DISALIN!\n\nCara pakai paling mudah di SIRS:\n1. Buka tab situs SIRS Kemenkes (sirs.kemkes.go.id)\n2. Tekan F12 -> Buka tab 'Console'\n3. Tekan Ctrl+V (Paste) lalu tekan Enter!\n\nProses tarikan 24 layanan akan langsung berjalan otomatis di layar SIRS.");
+  }
+
   function openTarikModal(no, komp, nama) {
     document.getElementById('tarikLayanan').value = no;
     document.getElementById('tarikKomponen').value = komp || 'SDM';
@@ -731,6 +1050,13 @@ ob_start();
 
   document.getElementById('tarikModal')?.addEventListener('click', function(e) {
     if (e.target === this) closeTarikModal();
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeTarikModal();
+      closeBookmarkletHelp();
+    }
   });
 
   async function autoReadClipboard() {

@@ -97,14 +97,35 @@ foreach ($lines as $line) {
     $jumlah   = 1;
     $group    = ($komponen === 'SDM') ? 'ksdm01' : 'kalkes01';
 
-    // Format standar tabel SIRS: No (0), Strata (1), Nama (2), Kelompok (3), Status (4), Jumlah (5), Group (6)
-    if (count($cols) >= 7 && in_array(strtolower(trim($cols[1])), ['dasar', 'madya', 'utama', 'paripurna'])) {
+    $kategori = '';
+
+    $isStrata = in_array(strtolower(trim($cols[1] ?? '')), ['dasar', 'madya', 'utama', 'paripurna']);
+    $col4IsKelompok = in_array(strtolower(trim($cols[4] ?? '')), ['alat kesehatan', 'sarana']);
+    $col3IsSDM = strtolower(trim($cols[3] ?? '')) === 'sdm medis';
+    $col5IsStatus = in_array(strtolower(trim($cols[5] ?? '')), ['substitusi', 'wajib']);
+    $col4IsStatus = in_array(strtolower(trim($cols[4] ?? '')), ['substitusi', 'wajib']);
+
+    // Format 8 kolom Alkes & Sarana RS Online: No (0), Strata (1), Kode (2), Nama (3), Kelompok (4), Status (5), Jumlah (6), Group (7)
+    if ($isStrata && count($cols) >= 8 && ($col4IsKelompok || ($col5IsStatus && is_numeric(trim($cols[2] ?? ''))) || $komponen === 'Alkes')) {
         $strata   = ucfirst(strtolower(trim($cols[1])));
+        $kode     = trim($cols[2]);
+        $nama     = trim($cols[3]);
+        $rawKel   = strtolower(trim($cols[4]));
+        $kelompok = ($rawKel === 'sarana') ? 'Sarana' : 'Alat Kesehatan';
+        $status   = strtolower(trim($cols[5])) === 'substitusi' ? 'substitusi' : 'wajib';
+        $jumlah   = is_numeric(trim($cols[6])) ? (int)trim($cols[6]) : 0;
+        $group    = trim($cols[7]) ?: $group;
+        $kategori = '';
+    } elseif ($isStrata && count($cols) >= 7 && ($col3IsSDM || $col4IsStatus || !is_numeric(trim($cols[2] ?? '')))) {
+        // Format SDM Medis standar SIRS: No (0), Strata (1), Nama (2), Kelompok (3), Status (4), Jumlah (5), Group (6), [Kategori Nakes (7)]
+        $strata   = ucfirst(strtolower(trim($cols[1])));
+        $kode     = '';
         $nama     = trim($cols[2]);
         $kelompok = trim($cols[3]) ?: $kelompok;
         $status   = strtolower(trim($cols[4])) === 'substitusi' ? 'substitusi' : 'wajib';
         $jumlah   = is_numeric(trim($cols[5])) ? (int)trim($cols[5]) : 0;
         $group    = trim($cols[6]) ?: $group;
+        $kategori = isset($cols[7]) ? trim($cols[7]) : '';
     } elseif (count($cols) >= 3) {
         foreach ($cols as $c) {
             $cl = strtolower(trim($c));
@@ -113,19 +134,22 @@ foreach ($lines as $line) {
             if (preg_match('/^k(sdm|alkes|sarana)\d+/i', $cl)) $group = strtolower($cl);
             if (in_array($cl, ['sdm medis', 'alat kesehatan', 'sarana'])) $kelompok = ucwords($cl);
         }
-        // Cari nama: pilih kolom pertama yang bukan angka dan bukan kata kunci strata/status/group/kelompok
         $reserved = ['dasar', 'madya', 'utama', 'paripurna', 'wajib', 'substitusi', 'sdm medis', 'alat kesehatan', 'sarana', 'sdm', 'alkes'];
         foreach ($cols as $idx => $c) {
             $cl = strtolower(trim($c));
             if ($idx > 0 && strlen($cl) > 2 && !is_numeric($cl) && !in_array($cl, $reserved) && !preg_match('/^k(sdm|alkes|sarana)\d+/i', $cl)) {
                 $nama = trim($c);
+                if ($idx > 1 && is_numeric(trim($cols[$idx - 1]))) {
+                    $kode = trim($cols[$idx - 1]);
+                }
                 break;
             }
         }
-        if (!$nama) $nama = trim($cols[1] ?? $cols[0]);
+        if (!$nama) $nama = trim($cols[2] ?? $cols[1] ?? $cols[0]);
         if (isset($cols[count($cols)-1]) && is_numeric(trim($cols[count($cols)-1]))) {
             $jumlah = (int)trim($cols[count($cols)-1]);
         }
+        if (isset($cols[7])) $kategori = trim($cols[7]);
     } else {
         $nama = trim($cols[0]);
     }
@@ -141,7 +165,8 @@ foreach ($lines as $line) {
         $kelompok,
         $status,
         $jumlah,
-        $group
+        $group,
+        $kategori
     ];
 }
 

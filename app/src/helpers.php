@@ -45,45 +45,43 @@ function appUrl(string $path = ''): string
 {
     static $baseUrl = null;
     if ($baseUrl === null) {
-        // 1. Prioritas utama: Nilai dari environment variable APP_URL
-        $envUrl = getenv('APP_URL') ?: ($_ENV['APP_URL'] ?? '');
-
-        // 2. Jika tidak ada di env server, coba baca langsung file .env
-        if (!$envUrl) {
-            $candidates = [
-                __DIR__ . '/../.env',
-                __DIR__ . '/../../.env',
-                defined('ROOT') ? ROOT . '/.env' : null,
-                defined('ROOT') ? dirname(ROOT) . '/.env' : null,
-                '/var/www/html/.env',
-                '/var/www/.env'
-            ];
-            foreach ($candidates as $filePath) {
-                if ($filePath && file_exists($filePath) && is_readable($filePath)) {
-                    $raw = @file_get_contents($filePath);
-                    if ($raw && preg_match('/^\s*APP_URL\s*=\s*([^\r\n#]+)/m', $raw, $matches)) {
-                        $candidateUrl = trim($matches[1], " \t\n\r\0\x0B\"'");
-                        if (!empty($candidateUrl)) {
-                            $envUrl = $candidateUrl;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        if ($envUrl) {
-            $baseUrl = rtrim($envUrl, '/');
-        } else {
-            // 3. Fallback cerdas: Deteksi protokol (HTTPS / HTTP) dan Host request saat ini
+        // 1. Jika dalam web request aktif, gunakan domain & port aktif browser
+        if (!empty($_SERVER['HTTP_HOST'])) {
             $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
                 || (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == 443)
                 || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https')
                 || (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && strtolower($_SERVER['HTTP_X_FORWARDED_SSL']) === 'on');
 
             $scheme = $isHttps ? 'https' : 'http';
-            $host   = $_SERVER['HTTP_HOST'] ?? 'localhost:8088';
-            $baseUrl = $scheme . '://' . $host;
+            $baseUrl = $scheme . '://' . $_SERVER['HTTP_HOST'];
+        } else {
+            // 2. Untuk CLI/Cron: Nilai dari environment variable APP_URL
+            $envUrl = getenv('APP_URL') ?: ($_ENV['APP_URL'] ?? '');
+
+            if (!$envUrl) {
+                $candidates = [
+                    __DIR__ . '/../.env',
+                    __DIR__ . '/../../.env',
+                    defined('ROOT') ? ROOT . '/.env' : null,
+                    defined('ROOT') ? dirname(ROOT) . '/.env' : null,
+                    '/var/www/html/.env',
+                    '/var/www/.env'
+                ];
+                foreach ($candidates as $filePath) {
+                    if ($filePath && file_exists($filePath) && is_readable($filePath)) {
+                        $raw = @file_get_contents($filePath);
+                        if ($raw && preg_match('/^\s*APP_URL\s*=\s*([^\r\n#]+)/m', $raw, $matches)) {
+                            $candidateUrl = trim($matches[1], " \t\n\r\0\x0B\"'");
+                            if (!empty($candidateUrl)) {
+                                $envUrl = $candidateUrl;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            $baseUrl = $envUrl ? rtrim($envUrl, '/') : 'http://localhost:8088';
         }
     }
 
