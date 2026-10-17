@@ -63,8 +63,13 @@ function fromFilename(fn) {
   if (!out.no) out.no = canonLayanan(rest.replace(/[-–_].*$/, ""));
   return out;
 }
+// Normalisasi prefix group agar 'gsarana09' === 'ksarana09', 'galkes03' === 'kalkes03', dst.
+// RS Online kadang memakai prefix 'g' (global) alih-alih 'k' (khusus).
+function normalizeGroup(g) {
+  return String(g || "").toLowerCase().replace(/^g(sdm|sarana|alkes)(\d)/i, "k$1$2");
+}
 function jenisOf(kelompok, group) {
-  const k = String(kelompok || "").toLowerCase(), g = String(group || "").toLowerCase();
+  const k = String(kelompok || "").toLowerCase(), g = normalizeGroup(group);
   if (k.includes("sdm") || k.includes("nakes") || /^ksdm/.test(g)) return "SDM";
   if (k.includes("sarana") || /sarana/.test(g)) return "Sarana";
   if (k.includes("alat") || k.includes("alkes") || /^kalkes/.test(g)) return "Alat";
@@ -188,7 +193,7 @@ function loadCustomSnapshot(rawItems, label = "Snapshot") {
     const key = no + "|" + komp;
     if (!sources.has(key)) sources.set(key, { file: label, at: new Date().toISOString(), rows: [], user: true });
 
-    // Gunakan group asli jika ada (misal ksdm01, kalkes01, ksarana01 dari SIRS).
+    // Gunakan group asli jika ada (misal ksdm01, kalkes01, ksarana01 / gsarana01 dari SIRS).
     // Hanya buat group fallback jika kolom group benar-benar kosong.
     let safeGroup = (group && String(group).trim()) ? String(group).trim().toLowerCase() : "";
     if (!safeGroup) {
@@ -200,9 +205,26 @@ function loadCustomSnapshot(rawItems, label = "Snapshot") {
       safeGroup = prefix + String(idx).padStart(2, "0");
     }
 
+    // Normalisasi prefix g → k: gsarana01 → ksarana01, galkes03 → kalkes03, dst.
+    safeGroup = normalizeGroup(safeGroup);
+
+    // ── Kompatibilitas snapshot lama ──────────────────────────────────────────
+    // Snapshot lama (sebelum fix) menyimpan kode RS Online (gsarana01 dll.) di
+    // field `kategori` dan kode auto-generated (ksarana70 dll.) di field `group`.
+    // Deteksi pola ini: jika item bukan SDM dan kategori berisi kode RS Online,
+    // gunakan kategori sebagai group yang benar dan kosongkan kategori.
+    let resolvedKategori = kategori;
+    if (komp !== "SDM") {
+      const katStr = String(kategori || "").trim().toLowerCase();
+      if (/^[gk](sdm|alkes|sarana)\d+/i.test(katStr)) {
+        safeGroup = normalizeGroup(katStr);
+        resolvedKategori = ""; // bersihkan agar tidak muncul di kolom "Kategori Nakes"
+      }
+    }
+
     sources.get(key).rows.push({
       no, layanan: LAYANAN[no] || layanan, strata: strata || "Dasar", kode, nama, kelompok,
-      kategori, jenis: jenis || "Alat", komp,
+      kategori: resolvedKategori, jenis: jenis || "Alat", komp,
       status: /wajib/i.test(status) ? "Wajib" : "Substitusi",
       jumlah: Number(jumlah) || 0, group: safeGroup
     });
@@ -273,7 +295,10 @@ function buildModel() {
   for (const v of sources.values()) items.push(...v.rows);
   const gmap = new Map();
   for (const it of items) {
-    const k = [it.no, it.strata, it.komp, it.group].join("|");
+    // Normalisasi prefix group: gsarana → ksarana, galkes → kalkes, gsdm → ksdm
+    // agar item dari RS Online (prefix g) dan seed/manual (prefix k) masuk ke grup yang sama
+    const normGroup = normalizeGroup(it.group);
+    const k = [it.no, it.strata, it.komp, normGroup].join("|");
     if (!gmap.has(k)) gmap.set(k, []);
     gmap.get(k).push(it);
   }

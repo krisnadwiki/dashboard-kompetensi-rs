@@ -114,7 +114,9 @@ foreach ($lines as $line) {
         $kelompok = ($rawKel === 'sarana') ? 'Sarana' : 'Alat Kesehatan';
         $status   = strtolower(trim($cols[5])) === 'substitusi' ? 'substitusi' : 'wajib';
         $jumlah   = is_numeric(trim($cols[6])) ? (int)trim($cols[6]) : 0;
-        $group    = trim($cols[7]) ?: $group;
+        // Normalisasi prefix g → k agar konsisten: gsarana→ksarana, galkes→kalkes
+        $rawGroup = trim($cols[7]) ?: $group;
+        $group    = preg_replace('/^g(sdm|alkes|sarana)(\d)/i', 'k$1$2', strtolower($rawGroup));
         $kategori = '';
     } elseif ($isStrata && count($cols) >= 7 && ($col3IsSDM || $col4IsStatus || !is_numeric(trim($cols[2] ?? '')))) {
         // Format SDM Medis standar SIRS: No (0), Strata (1), Nama (2), Kelompok (3), Status (4), Jumlah (5), Group (6), [Kategori Nakes (7)]
@@ -124,20 +126,25 @@ foreach ($lines as $line) {
         $kelompok = trim($cols[3]) ?: $kelompok;
         $status   = strtolower(trim($cols[4])) === 'substitusi' ? 'substitusi' : 'wajib';
         $jumlah   = is_numeric(trim($cols[5])) ? (int)trim($cols[5]) : 0;
-        $group    = trim($cols[6]) ?: $group;
+        // Normalisasi prefix g → k agar konsisten
+        $group    = preg_replace('/^g(sdm|alkes|sarana)(\d)/i', 'k$1$2', strtolower(trim($cols[6]) ?: $group));
         $kategori = isset($cols[7]) ? trim($cols[7]) : '';
     } elseif (count($cols) >= 3) {
         foreach ($cols as $c) {
             $cl = strtolower(trim($c));
             if (in_array($cl, ['dasar', 'madya', 'utama', 'paripurna'])) $strata = ucfirst($cl);
             if (in_array($cl, ['wajib', 'substitusi'])) $status = $cl;
-            if (preg_match('/^k(sdm|alkes|sarana)\d+/i', $cl)) $group = strtolower($cl);
+            // Cocokkan kode group dengan prefix k atau g (RS Online kadang pakai prefix g)
+            if (preg_match('/^[kg](sdm|alkes|sarana)\d+/i', $cl)) {
+                // Normalisasi: gsarana → ksarana, galkes → kalkes, gsdm → ksdm
+                $group = preg_replace('/^g(sdm|alkes|sarana)(\d)/i', 'k$1$2', strtolower($cl));
+            }
             if (in_array($cl, ['sdm medis', 'alat kesehatan', 'sarana'])) $kelompok = ucwords($cl);
         }
         $reserved = ['dasar', 'madya', 'utama', 'paripurna', 'wajib', 'substitusi', 'sdm medis', 'alat kesehatan', 'sarana', 'sdm', 'alkes'];
         foreach ($cols as $idx => $c) {
             $cl = strtolower(trim($c));
-            if ($idx > 0 && strlen($cl) > 2 && !is_numeric($cl) && !in_array($cl, $reserved) && !preg_match('/^k(sdm|alkes|sarana)\d+/i', $cl)) {
+            if ($idx > 0 && strlen($cl) > 2 && !is_numeric($cl) && !in_array($cl, $reserved) && !preg_match('/^[kg](sdm|alkes|sarana)\d+/i', $cl)) {
                 $nama = trim($c);
                 if ($idx > 1 && is_numeric(trim($cols[$idx - 1]))) {
                     $kode = trim($cols[$idx - 1]);
