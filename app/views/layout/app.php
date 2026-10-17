@@ -14,7 +14,7 @@
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <!-- App CSS -->
-  <link rel="stylesheet" href="/assets/css/app.css">
+  <link rel="stylesheet" href="/assets/css/app.css?v=<?= @filemtime(dirname(__DIR__, 2) . '/assets/css/app.css') ?: time() ?>">
   <?php if (isset($extraCss)): foreach ($extraCss as $css): ?>
   <link rel="stylesheet" href="<?= e($css) ?>">
   <?php endforeach; endif; ?>
@@ -70,13 +70,6 @@
     </a>
     <?php endif; ?>
   </nav>
-
-  <div class="sidebar-footer">
-    <a href="/master/sinkronisasi" class="btn-rsonline" title="Buka RS Online">
-      <i data-lucide="external-link"></i>
-      <span>Buka RS Online</span>
-    </a>
-  </div>
 </aside>
 
 <!-- ─── Overlay (mobile) ──────────────────────────────────────────────────── -->

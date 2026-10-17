@@ -25,7 +25,6 @@
       <button class="btn" id="btn-theme" type="button" title="Ganti mode tema (Terang / Gelap / Sistem)">🌓 Tema</button>
       <button class="btn primary" id="btn-all-csv" type="button" title="Unduh semua 24 layanan dalam format CSV">Unduh Semua CSV</button>
       <button class="btn" id="btn-xlsx" type="button">Unduh rekap Excel</button>
-      <a href="/login" class="btn" style="background:var(--primary); color:#fff; border-color:var(--primary); font-weight:600;" title="Login petugas rumah sakit">🔐 Masuk SIMRS</a>
     </div>
   </header>
 
@@ -72,29 +71,143 @@
     <div class="chart" id="top"></div>
   </section>
 
-  <section class="card" id="daftar">
-    <h2>Daftar kekurangan per group</h2>
-    <p class="note">Satu baris per group yang belum terpenuhi, dengan item yang belum ada.</p>
-    <div class="tools">
-      <input type="search" id="q" placeholder="Cari item, kode group, layanan…" aria-label="Cari">
-      <select id="f-komp" aria-label="Komponen"><option value="">Semua komponen</option><option value="SDM">SDM</option><option value="Alkes">Alkes &amp; sarana</option></select>
-      <select id="f-strata" aria-label="Strata"><option value="">Semua strata</option><option>Dasar</option><option>Madya</option><option>Utama</option><option>Paripurna</option></select>
-      <select id="f-sifat" aria-label="Sifat"><option value="">Wajib &amp; substitusi</option><option>Wajib</option><option>Substitusi</option></select>
-      <button class="chip" id="picked" type="button" hidden></button>
-      <span class="count" id="count"></span>
+  <!-- ─── TABBED NAVIGATION: DAFTAR KEKURANGAN & SELURUH DETIL KOMPONEN RS ONLINE ─── -->
+  <section class="card" id="komponen-card">
+    <div class="section-nav-tabs">
+      <button type="button" class="tab-btn active" id="tab-btn-gap" data-target="panel-gap">
+        <span class="tab-icon">⚠️</span>
+        <span class="tab-text">Daftar Kekurangan (Analisis Gap)</span>
+        <span class="tab-count" id="badge-gap-count">0</span>
+      </button>
+      <button type="button" class="tab-btn" id="tab-btn-all" data-target="panel-all">
+        <span class="tab-icon">🏥</span>
+        <span class="tab-text">Seluruh Detil Komponen (RS Online Asli)</span>
+        <span class="tab-count" id="badge-all-count">0</span>
+      </button>
     </div>
-    <div class="tbox">
-      <table class="gap">
-        <thead><tr>
-          <th data-k="no"><button type="button">Layanan</button></th>
-          <th data-k="strata"><button type="button">Strata</button></th>
-          <th data-k="komponen"><button type="button">Komponen</button></th>
-          <th data-k="group" class="hide-sm"><button type="button">Group</button></th>
-          <th data-k="kurang"><button type="button">Belum terpenuhi</button></th>
-          <th data-k="sifat"><button type="button">Sifat</button></th>
-        </tr></thead>
-        <tbody id="tb"></tbody>
-      </table>
+
+    <!-- Panel 1: Daftar Kekurangan (Analisis Gap) -->
+    <div class="tab-panel active" id="panel-gap">
+      <div class="panel-header">
+        <div>
+          <h2>Daftar Kekurangan per Group Persyaratan</h2>
+          <p class="note">Menampilkan group persyaratan yang belum terpenuhi, beserta rincian item wajib/substitusi yang belum ada.</p>
+        </div>
+      </div>
+      <div class="tools">
+        <input type="search" id="q" placeholder="Cari item, kode group, layanan…" aria-label="Cari kekurangan">
+        <select id="f-komp" aria-label="Komponen"><option value="">Semua komponen</option><option value="SDM">SDM</option><option value="Alkes">Alkes &amp; sarana</option></select>
+        <select id="f-strata" aria-label="Strata"><option value="">Semua strata</option><option>Dasar</option><option>Madya</option><option>Utama</option><option>Paripurna</option></select>
+        <select id="f-sifat" aria-label="Sifat"><option value="">Wajib &amp; substitusi</option><option>Wajib</option><option>Substitusi</option></select>
+        <button class="chip" id="picked" type="button" hidden></button>
+        <span class="count" id="count"></span>
+      </div>
+      <div class="tbox">
+        <table class="gap">
+          <thead><tr>
+            <th data-k="no"><button type="button">Layanan</button></th>
+            <th data-k="strata"><button type="button">Strata</button></th>
+            <th data-k="komponen"><button type="button">Komponen</button></th>
+            <th data-k="group" class="hide-sm"><button type="button">Group</button></th>
+            <th data-k="kurang"><button type="button">Belum terpenuhi</button></th>
+            <th data-k="sifat"><button type="button">Sifat</button></th>
+          </tr></thead>
+          <tbody id="tb"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Panel 2: Seluruh Detil Komponen (Format Asli RS Online) -->
+    <div class="tab-panel" id="panel-all" hidden>
+      <div class="panel-header">
+        <div>
+          <h2>Seluruh Detil Komponen Terstandar RS Online</h2>
+          <p class="note">Data lengkap seluruh instrumen SDM dan Alkes per layanan &amp; strata, format dan skema warna standar RS Online.</p>
+        </div>
+        <div class="panel-actions">
+          <button type="button" class="btn" id="btn-export-all-filter" title="Unduh CSV data yang sedang terfilter">📥 Unduh CSV Terfilter</button>
+        </div>
+      </div>
+
+      <!-- Live Summary Badges -->
+      <div class="all-stats-bar">
+        <span class="stat-pill total"><b id="stat-all-total">0</b> Komponen Terfilter</span>
+        <span class="stat-pill ok"><b id="stat-all-ok">0</b> Terpenuhi (Jumlah &gt; 0)</span>
+        <span class="stat-pill empty"><b id="stat-all-empty">0</b> Belum Ada (Jumlah = 0)</span>
+        <span class="stat-pill wajib"><b id="stat-all-wajib">0</b> Wajib</span>
+        <span class="stat-pill sub"><b id="stat-all-sub">0</b> Substitusi</span>
+      </div>
+
+      <!-- Advanced Filter Toolbar -->
+      <div class="tools all-tools">
+        <input type="search" id="all-q" placeholder="Cari nama komponen, kode, kelompok, group..." aria-label="Cari seluruh komponen" style="flex:1 1 18rem;">
+        <select id="all-f-layanan" aria-label="Pilih Layanan">
+          <option value="">Semua 24 Layanan</option>
+        </select>
+        <select id="all-f-komp" aria-label="Komponen">
+          <option value="">Semua Komponen</option>
+          <option value="SDM">SDM</option>
+          <option value="Alkes">Alkes &amp; Sarana</option>
+        </select>
+        <select id="all-f-strata" aria-label="Strata">
+          <option value="">Semua Strata</option>
+          <option value="Dasar">Dasar</option>
+          <option value="Madya">Madya</option>
+          <option value="Utama">Utama</option>
+          <option value="Paripurna">Paripurna</option>
+        </select>
+        <select id="all-f-status" aria-label="Status Sifat">
+          <option value="">Semua Status</option>
+          <option value="Wajib">Wajib</option>
+          <option value="Substitusi">Substitusi</option>
+        </select>
+        <select id="all-f-kondisi" aria-label="Kondisi Pemenuhan">
+          <option value="">Semua Kondisi</option>
+          <option value="ada">Terpenuhi (Jumlah &gt; 0)</option>
+          <option value="kosong">Belum Ada (Jumlah = 0)</option>
+        </select>
+      </div>
+
+      <!-- RS Online Styled Table -->
+      <div class="tbox" style="max-height: 42rem;">
+        <table class="gap tbl-rsonline">
+          <thead>
+            <tr>
+              <th data-all-k="no" style="width:50px;"><button type="button">No.</button></th>
+              <th data-all-k="layanan" style="min-width:160px;"><button type="button">Layanan</button></th>
+              <th data-all-k="strata" style="width:100px;"><button type="button">Strata</button></th>
+              <th data-all-k="komp" style="width:95px;"><button type="button">Komponen</button></th>
+              <th data-all-k="nama"><button type="button">Nama Komponen / Uraian</button></th>
+              <th data-all-k="kelompok" class="hide-sm" style="min-width:140px;"><button type="button">Kelompok</button></th>
+              <th data-all-k="status" style="width:105px;"><button type="button">Status</button></th>
+              <th data-all-k="jumlah" style="width:85px; text-align:center;"><button type="button">Jumlah</button></th>
+              <th data-all-k="group" class="hide-sm" style="width:105px;"><button type="button">Group</button></th>
+            </tr>
+          </thead>
+          <tbody id="all-tb"></tbody>
+        </table>
+      </div>
+
+      <!-- Pagination / Count controls -->
+      <div class="table-pagination">
+        <div class="page-info">
+          Menampilkan <span id="all-page-range">0-0</span> dari <b id="all-total-filtered">0</b> komponen
+        </div>
+        <div class="page-controls">
+          <label style="display:flex; align-items:center; gap:6px;">Baris per halaman:
+            <select id="all-per-page">
+              <option value="50">50</option>
+              <option value="100" selected>100</option>
+              <option value="250">250</option>
+              <option value="1000">1000</option>
+              <option value="all">Semua</option>
+            </select>
+          </label>
+          <button type="button" class="btn" id="all-btn-prev" style="padding:4px 10px;">« Sebelumnya</button>
+          <span class="page-indicator" id="all-page-indicator">Halaman 1 / 1</span>
+          <button type="button" class="btn" id="all-btn-next" style="padding:4px 10px;">Selanjutnya »</button>
+        </div>
+      </div>
     </div>
   </section>
 </div>

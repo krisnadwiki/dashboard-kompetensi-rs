@@ -319,7 +319,7 @@ function buildModel() {
 // ---------- render ----------
 function rebuild() {
   model = buildModel();
-  renderCoverage(); renderKpis(); renderMatrix(); renderBars(); renderTop(); renderTable();
+  renderCoverage(); renderKpis(); renderMatrix(); renderBars(); renderTop(); renderTable(); renderAllTable();
 }
 
 function renderCoverage() {
@@ -521,18 +521,197 @@ function renderTable() {
   rows = rows.slice().sort((a, b) => { const A = val(a), B = val(b); return (A < B ? -1 : A > B ? 1 : 0) * dir; });
   document.querySelectorAll("table.gap th").forEach((th) => th.setAttribute("aria-sort", th.dataset.k === k ? (dir > 0 ? "ascending" : "descending") : "none"));
   const chip = $("picked");
-  chip.hidden = !p.no;
-  if (p.no) chip.textContent = `${LAYANAN[p.no]}${p.strata ? " · " + p.strata : ""}  ×`;
-  $("tb").replaceChildren(...rows.map((g) => {
+  if (chip) {
+    chip.hidden = !p.no;
+    if (p.no) chip.textContent = `${LAYANAN[p.no]}${p.strata ? " · " + p.strata : ""}  ×`;
+  }
+  const tb = $("tb");
+  if (tb) {
+    tb.replaceChildren(...rows.map((g) => {
+      const tr = el("tr");
+      tr.append(el("td", null, `${g.no}. ${g.layanan}`), el("td", null, g.strata));
+      const tk = el("td"); tk.append(el("span", "pill " + (g.komp === "SDM" ? "k-sdm" : "k-alk"), g.komp === "SDM" ? "SDM" : g.jenis === "Sarana" ? "Sarana" : "Alkes")); tr.append(tk);
+      tr.append(el("td", "code hide-sm", g.group));
+      tr.append(el("td", null, g.kurang || g.persyaratan));
+      const ts = el("td"); ts.append(el("span", "pill " + (g.sifat === "Substitusi" ? "s" : "w"), g.sifat)); tr.append(ts);
+      return tr;
+    }));
+  }
+  $("count") && ($("count").textContent = `${fmtInt(rows.length)} group`);
+  $("badge-gap-count") && ($("badge-gap-count").textContent = fmtInt(rows.length));
+}
+
+// ─── SELURUH DETIL KOMPONEN RS ONLINE ─────────────────────────────────────────
+const allUi = {
+  sortK: "no",
+  sortDir: 1,
+  page: 1,
+  perPage: 100,
+  filteredItems: []
+};
+
+function initAllLayananDropdown() {
+  const sel = $("all-f-layanan");
+  if (!sel || sel.children.length > 1) return;
+  for (let i = 1; i <= 24; i++) {
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = `${i}. ${LAYANAN[i]}`;
+    sel.appendChild(opt);
+  }
+}
+
+function renderAllTable() {
+  initAllLayananDropdown();
+  if (!model || !model.items) return;
+
+  const term = ($("all-q")?.value || "").trim().toLowerCase();
+  const flay = $("all-f-layanan")?.value ? Number($("all-f-layanan").value) : 0;
+  const fkomp = $("all-f-komp")?.value || "";
+  const fstrata = $("all-f-strata")?.value || "";
+  const fstatus = $("all-f-status")?.value || "";
+  const fkondisi = $("all-f-kondisi")?.value || "";
+
+  let filtered = model.items.filter((it) => {
+    if (flay && it.no !== flay) return false;
+    if (fkomp && it.komp !== fkomp) return false;
+    if (fstrata && it.strata !== fstrata) return false;
+    if (fstatus && it.status !== fstatus) return false;
+    if (fkondisi === "ada" && !(it.jumlah > 0)) return false;
+    if (fkondisi === "kosong" && it.jumlah > 0) return false;
+    if (term) {
+      const haystack = [it.no, it.layanan, it.strata, it.komp, it.nama, it.kelompok, it.kode, it.group, it.status].join(" ").toLowerCase();
+      if (!haystack.includes(term)) return false;
+    }
+    return true;
+  });
+
+  // Sorting
+  const k = allUi.sortK, dir = allUi.sortDir;
+  const val = (it) => {
+    if (k === "no") return it.no * 10000 + (SORD[it.strata] || 0) * 100 + (it.komp === "SDM" ? 1 : 2);
+    if (k === "strata") return SORD[it.strata] || 0;
+    if (k === "jumlah") return it.jumlah || 0;
+    return String(it[k] || "");
+  };
+  filtered.sort((a, b) => {
+    const A = val(a), B = val(b);
+    return (A < B ? -1 : A > B ? 1 : 0) * dir;
+  });
+
+  allUi.filteredItems = filtered;
+
+  // Counters
+  const totalCount = filtered.length;
+  const okCount = filtered.filter((i) => i.jumlah > 0).length;
+  const emptyCount = totalCount - okCount;
+  const wajibCount = filtered.filter((i) => i.status === "Wajib").length;
+  const subCount = filtered.filter((i) => i.status === "Substitusi").length;
+
+  $("stat-all-total") && ($("stat-all-total").textContent = fmtInt(totalCount));
+  $("stat-all-ok") && ($("stat-all-ok").textContent = fmtInt(okCount));
+  $("stat-all-empty") && ($("stat-all-empty").textContent = fmtInt(emptyCount));
+  $("stat-all-wajib") && ($("stat-all-wajib").textContent = fmtInt(wajibCount));
+  $("stat-all-sub") && ($("stat-all-sub").textContent = fmtInt(subCount));
+  $("badge-all-count") && ($("badge-all-count").textContent = fmtInt(model.items.length));
+  $("all-total-filtered") && ($("all-total-filtered").textContent = fmtInt(totalCount));
+
+  // Pagination calculation
+  const perPageVal = $("all-per-page")?.value || "100";
+  const perPage = perPageVal === "all" ? Math.max(1, totalCount) : Number(perPageVal);
+  const totalPages = Math.max(1, Math.ceil(totalCount / perPage));
+  if (allUi.page > totalPages) allUi.page = totalPages;
+  if (allUi.page < 1) allUi.page = 1;
+
+  const startIdx = (allUi.page - 1) * perPage;
+  const endIdx = Math.min(startIdx + perPage, totalCount);
+  const pageRows = filtered.slice(startIdx, endIdx);
+
+  $("all-page-range") && ($("all-page-range").textContent = totalCount === 0 ? "0" : `${startIdx + 1}–${endIdx}`);
+  $("all-page-indicator") && ($("all-page-indicator").textContent = `Halaman ${allUi.page} / ${totalPages}`);
+  const btnPrev = $("all-btn-prev");
+  const btnNext = $("all-btn-next");
+  if (btnPrev) btnPrev.disabled = allUi.page <= 1;
+  if (btnNext) btnNext.disabled = allUi.page >= totalPages;
+
+  // Sorting header indicator
+  document.querySelectorAll("table.tbl-rsonline th").forEach((th) => {
+    th.setAttribute("aria-sort", th.dataset.allK === k ? (dir > 0 ? "ascending" : "descending") : "none");
+  });
+
+  const tbody = $("all-tb");
+  if (!tbody) return;
+
+  if (pageRows.length === 0) {
     const tr = el("tr");
-    tr.append(el("td", null, `${g.no}. ${g.layanan}`), el("td", null, g.strata));
-    const tk = el("td"); tk.append(el("span", "pill " + (g.komp === "SDM" ? "k-sdm" : "k-alk"), g.komp === "SDM" ? "SDM" : g.jenis === "Sarana" ? "Sarana" : "Alkes")); tr.append(tk);
-    tr.append(el("td", "code hide-sm", g.group));
-    tr.append(el("td", null, g.kurang || g.persyaratan));
-    const ts = el("td"); ts.append(el("span", "pill " + (g.sifat === "Substitusi" ? "s" : "w"), g.sifat)); tr.append(ts);
+    const td = el("td", null, "Tidak ada data komponen yang cocok dengan kriteria filter.");
+    td.colSpan = 9;
+    td.style.textAlign = "center";
+    td.style.padding = "28px 12px";
+    td.style.color = "var(--muted)";
+    tr.appendChild(td);
+    tbody.replaceChildren(tr);
+    return;
+  }
+
+  tbody.replaceChildren(...pageRows.map((it, idx) => {
+    const tr = el("tr");
+
+    // 1. No urut
+    tr.append(el("td", "code", String(startIdx + idx + 1)));
+
+    // 2. Layanan
+    const tdLay = el("td");
+    tdLay.innerHTML = `<b>${it.no}.</b> ${it.layanan}`;
+    tr.append(tdLay);
+
+    // 3. Strata (RS Online styled badge)
+    const tdStrata = el("td");
+    const strClass = "badge-strata badge-strata-" + (it.strata || "dasar").toLowerCase();
+    tdStrata.append(el("span", strClass, it.strata));
+    tr.append(tdStrata);
+
+    // 4. Komponen (SDM / Alkes / Sarana)
+    const tdKomp = el("td");
+    tdKomp.append(el("span", "pill " + (it.komp === "SDM" ? "k-sdm" : "k-alk"), it.komp === "SDM" ? "SDM" : (it.jenis || "Alkes")));
+    tr.append(tdKomp);
+
+    // 5. Nama Komponen / Uraian
+    const tdNama = el("td");
+    tdNama.style.fontWeight = "500";
+    tdNama.textContent = it.nama;
+    if (it.kode) {
+      const codeSpan = el("span", "code hide-sm", ` (${it.kode})`);
+      codeSpan.style.opacity = "0.7";
+      tdNama.appendChild(codeSpan);
+    }
+    tr.append(tdNama);
+
+    // 6. Kelompok
+    const tdKel = el("td", "hide-sm", it.kelompok || "-");
+    tdKel.style.color = "var(--muted)";
+    tdKel.style.fontSize = "12px";
+    tr.append(tdKel);
+
+    // 7. Status (Wajib / Substitusi)
+    const tdStatus = el("td");
+    const isWajib = /wajib/i.test(it.status);
+    tdStatus.append(el("span", isWajib ? "badge-status-wajib" : "badge-status-sub", isWajib ? "Wajib" : "Substitusi"));
+    tr.append(tdStatus);
+
+    // 8. Jumlah (Ada: Hijau, Kosong: Lembut)
+    const tdJml = el("td");
+    tdJml.style.textAlign = "center";
+    const hasQty = it.jumlah > 0;
+    const qtySpan = el("span", hasQty ? "badge-qty-ada" : "badge-qty-nol", hasQty ? `✓ ${it.jumlah}` : "0");
+    tdJml.append(qtySpan);
+    tr.append(tdJml);
+
+    // 9. Group (ksdm01, kalkes01)
+    tr.append(el("td", "code hide-sm", it.group || "-"));
+
     return tr;
   }));
-  $("count").textContent = `${fmtInt(rows.length)} group`;
 }
 
 // ---------- Excel ----------
@@ -753,6 +932,61 @@ $("picked")?.addEventListener("click", () => pick(ui.pick.no, ui.pick.strata));
 document.querySelectorAll("table.gap th").forEach((th) => th.querySelector("button")?.addEventListener("click", () => {
   const k = th.dataset.k; if (ui.sortK === k) ui.sortDir = -ui.sortDir; else { ui.sortK = k; ui.sortDir = 1; } renderTable();
 }));
+
+// Tab Switching
+$("tab-btn-gap")?.addEventListener("click", () => {
+  $("tab-btn-gap")?.classList.add("active");
+  $("tab-btn-all")?.classList.remove("active");
+  const pGap = $("panel-gap"); if (pGap) pGap.hidden = false;
+  const pAll = $("panel-all"); if (pAll) pAll.hidden = true;
+});
+$("tab-btn-all")?.addEventListener("click", () => {
+  $("tab-btn-all")?.classList.add("active");
+  $("tab-btn-gap")?.classList.remove("active");
+  const pGap = $("panel-gap"); if (pGap) pGap.hidden = true;
+  const pAll = $("panel-all"); if (pAll) pAll.hidden = false;
+  renderAllTable();
+});
+
+// Full Components Table Listeners
+["all-q", "all-f-layanan", "all-f-komp", "all-f-strata", "all-f-status", "all-f-kondisi"].forEach((id) => {
+  $(id)?.addEventListener("input", () => { allUi.page = 1; renderAllTable(); });
+  $(id)?.addEventListener("change", () => { allUi.page = 1; renderAllTable(); });
+});
+$("all-per-page")?.addEventListener("change", () => { allUi.page = 1; renderAllTable(); });
+$("all-btn-prev")?.addEventListener("click", () => { if (allUi.page > 1) { allUi.page--; renderAllTable(); } });
+$("all-btn-next")?.addEventListener("click", () => { allUi.page++; renderAllTable(); });
+
+document.querySelectorAll("table.tbl-rsonline th").forEach((th) => {
+  th.querySelector("button")?.addEventListener("click", () => {
+    const k = th.dataset.allK;
+    if (allUi.sortK === k) allUi.sortDir = -allUi.sortDir;
+    else { allUi.sortK = k; allUi.sortDir = 1; }
+    renderAllTable();
+  });
+});
+
+$("btn-export-all-filter")?.addEventListener("click", () => {
+  if (!allUi.filteredItems || !allUi.filteredItems.length) {
+    toast("Tidak ada data untuk diunduh.");
+    return;
+  }
+  const headers = ["No Layanan", "Layanan", "Strata", "Komponen", "Kode", "Nama Komponen", "Kelompok", "Status", "Jumlah", "Group"];
+  const rows = allUi.filteredItems.map((it) => [
+    it.no,
+    `"${(it.layanan || "").replace(/"/g, '""')}"`,
+    it.strata,
+    it.komp,
+    it.kode,
+    `"${(it.nama || "").replace(/"/g, '""')}"`,
+    `"${(it.kelompok || "").replace(/"/g, '""')}"`,
+    it.status,
+    it.jumlah,
+    it.group
+  ]);
+  const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+  save(`Detil_Komponen_RS_Online_${new Date().toISOString().slice(0, 10)}.csv`, csv);
+});
 let rw;
 window.addEventListener("resize", () => { clearTimeout(rw); rw = setTimeout(() => { if (model) { renderBars(); renderTop(); } }, 150); });
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => { if (model) { renderBars(); renderTop(); } });

@@ -141,11 +141,234 @@ table.gap th[aria-sort="ascending"] button::after { content: " ↑"; color: var(
 table.gap th[aria-sort="descending"] button::after { content: " ↓"; color: var(--muted); }
 table.gap td { padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
 td.code { font-family: var(--f-mono); font-size: .76rem; color: var(--muted); white-space: nowrap; }
-.pill { display: inline-block; font-size: .72rem; font-weight: 600; padding: 1px 7px; border-radius: 999px; }
+.pill { display: inline-block; font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
 .pill.w { background: var(--bad-bg); color: var(--bad); }
 .pill.s { background: var(--accent-soft); color: var(--muted); }
 .pill.k-sdm { background: color-mix(in srgb, var(--c-sdm) 16%, transparent); color: var(--c-sdm); }
 .pill.k-alk { background: color-mix(in srgb, var(--c-alk) 18%, transparent); color: var(--c-alk); }
+
+/* ─── Modern Tab Navigation (Segmented Switcher) ────────────────────────── */
+.section-nav-tabs {
+  display: flex;
+  gap: 6px;
+  background: var(--bg);
+  padding: 5px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  margin-bottom: 16px;
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.tab-btn:hover {
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.4);
+}
+:root[data-theme="dark"] .tab-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.tab-btn.active {
+  background: var(--panel);
+  color: var(--primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+:root[data-theme="dark"] .tab-btn.active {
+  background: #334155;
+  color: #60a5fa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.tab-count {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--primary);
+}
+.tab-btn.active .tab-count {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+/* ─── Panel Header & Live Stats ─────────────────────────────────────────── */
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.all-stats-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.stat-pill {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.stat-pill b {
+  font-weight: 700;
+  color: var(--fg);
+}
+.stat-pill.ok b { color: var(--ok); }
+.stat-pill.empty b { color: var(--bad); }
+.stat-pill.wajib b { color: #dc2626; }
+.stat-pill.sub b { color: #0284c7; }
+
+/* ─── RS Online Style Badges (Exact Theme) ──────────────────────────────── */
+.badge-strata {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  text-align: center;
+  white-space: nowrap;
+}
+.badge-strata-dasar { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+.badge-strata-madya { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
+.badge-strata-utama { background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; }
+.badge-strata-paripurna { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
+
+:root[data-theme="dark"] .badge-strata-dasar { background: rgba(34,197,94,0.18); color: #86efac; border-color: rgba(34,197,94,0.35); }
+:root[data-theme="dark"] .badge-strata-madya { background: rgba(59,130,246,0.18); color: #93c5fd; border-color: rgba(59,130,246,0.35); }
+:root[data-theme="dark"] .badge-strata-utama { background: rgba(168,85,247,0.18); color: #d8b4fe; border-color: rgba(168,85,247,0.35); }
+:root[data-theme="dark"] .badge-strata-paripurna { background: rgba(245,158,11,0.18); color: #fcd34d; border-color: rgba(245,158,11,0.35); }
+
+/* RS Online Status Badges */
+.badge-status-wajib {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+  white-space: nowrap;
+}
+.badge-status-sub {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #e0f2fe;
+  color: #0284c7;
+  border: 1px solid #7dd3fc;
+  white-space: nowrap;
+}
+:root[data-theme="dark"] .badge-status-wajib { background: rgba(220,38,38,0.2); color: #fca5a5; border-color: rgba(220,38,38,0.4); }
+:root[data-theme="dark"] .badge-status-sub { background: rgba(2,132,199,0.2); color: #7dd3fc; border-color: rgba(2,132,199,0.4); }
+
+/* RS Online Quantity Badges */
+.badge-qty-ada {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 28px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #6ee7b7;
+}
+.badge-qty-nol {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 28px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #94a3b8;
+  border: 1px solid var(--line);
+}
+:root[data-theme="dark"] .badge-qty-ada { background: rgba(5,150,105,0.2); color: #6ee7b7; border-color: rgba(5,150,105,0.4); }
+:root[data-theme="dark"] .badge-qty-nol { background: rgba(148,163,184,0.1); color: #94a3b8; border-color: #334155; }
+
+/* Table pagination */
+.table-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+}
+.page-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.page-controls select {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg);
+}
+.page-indicator {
+  font-weight: 600;
+  color: var(--fg);
+  padding: 0 4px;
+}
+
+/* Pulsing live tag */
+#live-tag {
+  position: relative;
+}
+#live-tag::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  animation: pulseLive 2s infinite;
+}
+@keyframes pulseLive {
+  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+  70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
 details.help summary { cursor: pointer; font-weight: 600; }
 details.help code, .mono { font-family: var(--f-mono); font-size: .8rem; }
 details.help table { border-collapse: collapse; font-size: .8rem; margin-top: 8px; }
