@@ -102,6 +102,25 @@
       </div>
     </section>
 
+    <section class="card" id="strata-summary">
+      <h2>Distribusi Tingkat Kompetensi 24 Layanan</h2>
+      <p class="note">Tingkat kompetensi tertinggi yang terpenuhi per layanan.</p>
+      <div class="strata-bar">
+        <div class="strata-seg seg-none" id="seg-none"></div>
+        <div class="strata-seg seg-dasar" id="seg-dasar"></div>
+        <div class="strata-seg seg-madya" id="seg-madya"></div>
+        <div class="strata-seg seg-utama" id="seg-utama"></div>
+        <div class="strata-seg seg-paripurna" id="seg-paripurna"></div>
+      </div>
+      <div class="strata-pills">
+        <span class="strata-pill seg-none"><b id="cnt-none">0</b> Tidak Kompeten</span>
+        <span class="strata-pill seg-dasar"><b id="cnt-dasar">0</b> Dasar</span>
+        <span class="strata-pill seg-madya"><b id="cnt-madya">0</b> Madya</span>
+        <span class="strata-pill seg-utama"><b id="cnt-utama">0</b> Utama</span>
+        <span class="strata-pill seg-paripurna"><b id="cnt-paripurna">0</b> Paripurna</span>
+      </div>
+    </section>
+
     <section class="two">
       <div class="card" id="peta">
         <h2>Peta pemenuhan per layanan</h2>
@@ -191,7 +210,7 @@
                 <th data-k="strata"><button type="button">Strata</button></th>
                 <th data-k="komponen"><button type="button">Komponen</button></th>
                 <th data-k="group" class="hide-sm"><button type="button">Group</button></th>
-                <th data-k="kurang"><button type="button">Belum terpenuhi</button></th>
+                <th data-k="kurang" class="col-kurang"><button type="button">Belum terpenuhi</button></th>
                 <th data-k="sifat"><button type="button">Sifat</button></th>
               </tr>
             </thead>
@@ -256,7 +275,7 @@
         </div>
 
         <!-- RS Online Styled Table -->
-        <div class="tbox" style="max-height: 42rem;">
+        <div class="tbox">
           <table class="gap tbl-rsonline">
             <thead>
               <tr>

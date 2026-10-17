@@ -293,7 +293,9 @@ function buildModel() {
       nItems: its.length, label,
       kategoriNakes: katNakes,
       persyaratan: komp === "SDM" ? label : listNames(its),
+      persyaratanAll: komp === "SDM" ? [label] : [...new Set(its.map((i) => i.nama))],
       kurang: met ? "" : (komp === "SDM" && !w.length ? label : listNames(missing)),
+      kurangAll: met ? [] : (komp === "SDM" && !w.length ? [label] : [...new Set(missing.map((i) => i.nama))]),
       dipenuhi: met ? have.map((i) => `${i.nama} (${i.jumlah})`).slice(0, 3).join("; ") : "",
     };
     g.item = shortName({ label: met ? g.persyaratan : (g.kurang || g.persyaratan), komp });
@@ -322,7 +324,7 @@ function buildModel() {
 // ---------- render ----------
 function rebuild() {
   model = buildModel();
-  renderCoverage(); renderKpis(); renderMatrix(); renderBars(); renderTop(); renderTable(); renderAllTable();
+  renderCoverage(); renderKpis(); renderStrataSummary(); renderMatrix(); renderBars(); renderTop(); renderTable(); renderAllTable();
 }
 
 let covUserToggled = false;
@@ -419,6 +421,56 @@ function renderKpis() {
     "Dari ", el("b", null, fmtInt(m.n)), " group persyaratan di ", el("b", null, String(new Set(m.ring.map((r) => r.no)).size)), " layanan, ",
     el("b", null, fmtPct(pct)), " sudah terpenuhi. ",
     ...(worst ? ["Pemenuhan terendah: ", el("b", null, `${worst.layanan} ${worst.strata}`), ` (${fmtPct(worst.pct)}).`] : []));
+}
+
+function renderStrataSummary() {
+  if (!model || !model.ring) return;
+
+  // Group ring entries by layanan number
+  const byNo = new Map();
+  for (const r of model.ring) {
+    if (!byNo.has(r.no)) byNo.set(r.no, []);
+    byNo.get(r.no).push(r);
+  }
+
+  const counts = { none: 0, Dasar: 0, Madya: 0, Utama: 0, Paripurna: 0 };
+
+  for (let i = 1; i <= 24; i++) {
+    const rs = byNo.get(i);
+    if (!rs) { counts.none++; continue; }
+    const metStrata = rs.filter((r) => r.status === "Terpenuhi");
+    if (metStrata.length === 0) {
+      counts.none++;
+    } else {
+      let highest = metStrata[0].strata;
+      for (const r of metStrata) {
+        if (SORD[r.strata] > SORD[highest]) highest = r.strata;
+      }
+      counts[highest]++;
+    }
+  }
+
+  const segs = [
+    { id: "seg-none", cnt: counts.none },
+    { id: "seg-dasar", cnt: counts.Dasar },
+    { id: "seg-madya", cnt: counts.Madya },
+    { id: "seg-utama", cnt: counts.Utama },
+    { id: "seg-paripurna", cnt: counts.Paripurna },
+  ];
+
+  segs.forEach((s) => {
+    const segEl = $(s.id);
+    if (segEl) {
+      segEl.style.width = s.cnt > 0 ? (s.cnt / 24 * 100) + "%" : "0%";
+      segEl.textContent = s.cnt > 0 ? s.cnt : "";
+    }
+  });
+
+  $("cnt-none") && ($("cnt-none").textContent = counts.none);
+  $("cnt-dasar") && ($("cnt-dasar").textContent = counts.Dasar);
+  $("cnt-madya") && ($("cnt-madya").textContent = counts.Madya);
+  $("cnt-utama") && ($("cnt-utama").textContent = counts.Utama);
+  $("cnt-paripurna") && ($("cnt-paripurna").textContent = counts.Paripurna);
 }
 
 const pick = (no, strata) => {
@@ -577,7 +629,7 @@ function renderTable() {
     (!flay || g.no === flay) &&
     (!p.no || g.no === p.no) && (!p.strata || g.strata === p.strata) && (!fk || g.komp === fk) && (!fs || g.strata === fs) &&
     (!ff || (ff === "Wajib" ? g.sifat !== "Substitusi" : g.sifat === "Substitusi")) &&
-    (!term || [g.layanan, g.strata, g.group, g.kurang, g.persyaratan, g.item, g.komp].join(" ").toLowerCase().includes(term)));
+    (!term || [g.layanan, g.strata, g.group, g.kurang, g.persyaratan, g.item, g.komp, ...(g.kurangAll || []), ...(g.persyaratanAll || [])].join(" ").toLowerCase().includes(term)));
   const k = ui.sortK, dir = ui.sortDir;
   const val = (g) => k === "no" ? g.no * 10 + SORD[g.strata] : k === "strata" ? SORD[g.strata] : String(g[k] || "");
   rows = rows.slice().sort((a, b) => { const A = val(a), B = val(b); return (A < B ? -1 : A > B ? 1 : 0) * dir; });
@@ -594,8 +646,31 @@ function renderTable() {
       tr.append(el("td", null, `${g.no}. ${g.layanan}`), el("td", null, g.strata));
       const tk = el("td"); tk.append(el("span", "pill " + (g.komp === "SDM" ? "k-sdm" : "k-alk"), g.komp === "SDM" ? "SDM" : g.jenis === "Sarana" ? "Sarana" : "Alkes")); tr.append(tk);
       tr.append(el("td", "code hide-sm", g.group));
-      const tdKurang = el("td");
-      tdKurang.append(el("div", null, g.kurang || g.persyaratan));
+      const tdKurang = el("td", "col-kurang");
+      const allNames = g.met ? (g.persyaratanAll || []) : ((g.kurangAll && g.kurangAll.length) ? g.kurangAll : (g.persyaratanAll || []));
+      const maxShow = 3;
+      if (allNames.length <= maxShow) {
+        tdKurang.append(el("div", null, allNames.join(" / ")));
+      } else {
+        const container = el("div", "kurang-cell");
+        const summary = el("span", null, allNames.slice(0, maxShow).join(" / "));
+        const btn = el("button", "expand-toggle");
+        btn.type = "button";
+        btn.textContent = ` / +${allNames.length - maxShow} lainnya`;
+        btn.addEventListener("click", function () {
+          if (this.dataset.expanded === "1") {
+            summary.textContent = allNames.slice(0, maxShow).join(" / ");
+            this.textContent = ` / +${allNames.length - maxShow} lainnya`;
+            this.dataset.expanded = "0";
+          } else {
+            summary.textContent = allNames.join(" / ");
+            this.textContent = " \u2190 tutup";
+            this.dataset.expanded = "1";
+          }
+        });
+        container.append(summary, btn);
+        tdKurang.append(container);
+      }
       if (g.komp === "SDM" && g.kategoriNakes) {
         const sub = el("div", "hide-sm", `Kategori Nakes: ${g.kategoriNakes}`);
         sub.style.cssText = "font-size:11.5px; color:var(--muted); margin-top:2px;";

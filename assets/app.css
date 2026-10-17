@@ -102,6 +102,33 @@ button, a.btn { font: inherit; cursor: pointer; text-decoration: none; }
 .kpi.bad .big { color: var(--bad); }
 .meter { height: 6px; border-radius: 3px; background: var(--line); margin-top: 8px; overflow: hidden; }
 .meter i { display: block; height: 100%; background: var(--accent); }
+
+/* ─── Strata Summary Bar ────────────────────────────────────────────────── */
+.strata-bar { display: flex; height: 32px; border-radius: 8px; overflow: hidden; margin-bottom: 12px; border: 1px solid var(--line); }
+.strata-seg { display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; transition: width 0.3s ease; min-width: 0; overflow: hidden; }
+.seg-none { background: #ef4444; }
+.seg-dasar { background: #22c55e; }
+.seg-madya { background: #3b82f6; }
+.seg-utama { background: #a855f7; }
+.seg-paripurna { background: #f59e0b; }
+.strata-pills { display: flex; flex-wrap: wrap; gap: 10px; }
+.strata-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 6px 12px; border-radius: 8px; font-weight: 600; border: 1px solid var(--line); }
+.strata-pill b { font-size: 16px; font-weight: 700; }
+.strata-pill.seg-none { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
+.strata-pill.seg-dasar { background: #dcfce7; color: #15803d; border-color: #86efac; }
+.strata-pill.seg-madya { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
+.strata-pill.seg-utama { background: #f3e8ff; color: #7e22ce; border-color: #d8b4fe; }
+.strata-pill.seg-paripurna { background: #fef3c7; color: #b45309; border-color: #fcd34d; }
+:root[data-theme="dark"] .strata-pill.seg-none { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.35); }
+:root[data-theme="dark"] .strata-pill.seg-dasar { background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.35); }
+:root[data-theme="dark"] .strata-pill.seg-madya { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.35); }
+:root[data-theme="dark"] .strata-pill.seg-utama { background: rgba(168,85,247,0.15); border-color: rgba(168,85,247,0.35); }
+:root[data-theme="dark"] .strata-pill.seg-paripurna { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.35); }
+:root[data-theme="dark"] .seg-none { background: #f87171; }
+:root[data-theme="dark"] .seg-dasar { background: #4ade80; }
+:root[data-theme="dark"] .seg-madya { background: #60a5fa; }
+:root[data-theme="dark"] .seg-utama { background: #c084fc; }
+:root[data-theme="dark"] .seg-paripurna { background: #fbbf24; }
 .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr)); gap: 16px; }
 /* matrix */
 .mx-box { overflow-x: auto; }
@@ -140,7 +167,7 @@ table.mx td.nm .n { font-family: var(--f-mono); color: var(--muted); margin-righ
 .count { font-size: .8rem; color: var(--muted); }
 .btn-reset { font: inherit; font-size: .78rem; border: 1px solid var(--line); color: var(--muted); background: var(--bg); border-radius: 6px; padding: 5px 10px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.15s; white-space: nowrap; }
 .btn-reset:hover { border-color: var(--bad); color: var(--bad); background: var(--bad-bg); }
-.tbox { max-height: 34rem; overflow: auto; border-top: 1px solid var(--line); }
+.tbox { overflow: auto; border-top: 1px solid var(--line); min-height: 45vh; max-height: 70vh; }
 table.gap { width: 100%; border-collapse: collapse; font-size: .82rem; }
 table.gap th { position: sticky; top: 0; background: var(--panel); text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); font-weight: 600; white-space: nowrap; }
 table.gap th button { all: unset; cursor: pointer; }
@@ -148,6 +175,11 @@ table.gap th[aria-sort="ascending"] button::after { content: " ↑"; color: var(
 table.gap th[aria-sort="descending"] button::after { content: " ↓"; color: var(--muted); }
 table.gap td { padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
 td.code { font-family: var(--f-mono); font-size: .76rem; color: var(--muted); white-space: nowrap; }
+.kurang-cell { display: inline; }
+.col-kurang { max-width: 340px; }
+.col-kurang > div, .col-kurang > .kurang-cell { max-width: 100%; word-break: break-word; overflow-wrap: break-word; }
+.expand-toggle { font: inherit; font-size: .78rem; color: var(--primary); background: none; border: none; cursor: pointer; padding: 0; font-weight: 600; transition: opacity 0.1s; }
+.expand-toggle:hover { opacity: 0.7; text-decoration: underline; }
 .pill { display: inline-block; font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
 .pill.w { background: var(--bad-bg); color: var(--bad); }
 .pill.s { background: var(--accent-soft); color: var(--muted); }
