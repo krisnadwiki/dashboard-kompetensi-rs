@@ -1014,6 +1014,18 @@ $("picked")?.addEventListener("click", () => {
   if (fLay) fLay.value = "";
   renderTable();
 });
+$("btn-reset-gap")?.addEventListener("click", () => {
+  $("q").value = "";
+  $("f-layanan").value = "";
+  $("f-komp").value = "";
+  $("f-strata").value = "";
+  $("f-sifat").value = "";
+  ui.pick = { no: null, strata: null };
+  const chip = $("picked");
+  if (chip) chip.hidden = true;
+  ui.sortK = "no"; ui.sortDir = 1;
+  renderMatrix(); renderBars(); renderTable();
+});
 document.querySelectorAll("table.gap th").forEach((th) => th.querySelector("button")?.addEventListener("click", () => {
   const k = th.dataset.k; if (ui.sortK === k) ui.sortDir = -ui.sortDir; else { ui.sortK = k; ui.sortDir = 1; } renderTable();
 }));
@@ -1042,6 +1054,16 @@ $("tab-btn-all")?.addEventListener("click", () => {
 $("all-per-page")?.addEventListener("change", () => { allUi.page = 1; renderAllTable(); });
 $("all-btn-prev")?.addEventListener("click", () => { if (allUi.page > 1) { allUi.page--; renderAllTable(); } });
 $("all-btn-next")?.addEventListener("click", () => { allUi.page++; renderAllTable(); });
+$("btn-reset-all")?.addEventListener("click", () => {
+  $("all-q").value = "";
+  $("all-f-layanan").value = "";
+  $("all-f-komp").value = "";
+  $("all-f-strata").value = "";
+  $("all-f-status").value = "";
+  $("all-f-kondisi").value = "";
+  allUi.page = 1; allUi.sortK = "no"; allUi.sortDir = 1;
+  renderAllTable();
+});
 
 document.querySelectorAll("table.tbl-rsonline th").forEach((th) => {
   th.querySelector("button")?.addEventListener("click", () => {

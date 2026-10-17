@@ -52,9 +52,6 @@
       <div class="actions">
         <button class="btn" id="btn-theme" type="button" title="Ganti mode tema (Terang / Gelap / Sistem)">🌓
           Tema</button>
-        <button class="btn primary" id="btn-all-csv" type="button" title="Unduh semua 24 layanan dalam format CSV">Unduh
-          Semua CSV</button>
-        <button class="btn" id="btn-xlsx" type="button">Unduh rekap Excel</button>
       </div>
     </header>
 
@@ -156,30 +153,35 @@
               yang belum ada.</p>
           </div>
         </div>
-        <div class="tools">
-          <input type="search" id="q" placeholder="Cari item, kode group, layanan…" aria-label="Cari kekurangan">
-          <select id="f-layanan" aria-label="Pilih Layanan">
-            <option value="">Semua 24 Layanan</option>
-          </select>
-          <select id="f-komp" aria-label="Komponen">
-            <option value="">Semua komponen</option>
-            <option value="SDM">SDM</option>
-            <option value="Alkes">Alkes &amp; sarana</option>
-          </select>
-          <select id="f-strata" aria-label="Strata">
-            <option value="">Semua strata</option>
-            <option>Dasar</option>
-            <option>Madya</option>
-            <option>Utama</option>
-            <option>Paripurna</option>
-          </select>
-          <select id="f-sifat" aria-label="Sifat">
-            <option value="">Wajib &amp; substitusi</option>
-            <option>Wajib</option>
-            <option>Substitusi</option>
-          </select>
-          <button class="chip" id="picked" type="button" hidden></button>
-          <span class="count" id="count"></span>
+        <div class="filter-bar">
+          <div class="filter-row">
+            <input type="search" class="filter-search" id="q" placeholder="Cari item, kode group, layanan…" aria-label="Cari kekurangan">
+            <button class="btn-reset" id="btn-reset-gap" type="button" title="Reset semua filter">↺ Reset</button>
+          </div>
+          <div class="filter-row">
+            <select id="f-layanan" aria-label="Pilih Layanan">
+              <option value="">Semua 24 Layanan</option>
+            </select>
+            <select id="f-komp" aria-label="Komponen">
+              <option value="">Semua komponen</option>
+              <option value="SDM">SDM</option>
+              <option value="Alkes">Alkes &amp; sarana</option>
+            </select>
+            <select id="f-strata" aria-label="Strata">
+              <option value="">Semua strata</option>
+              <option>Dasar</option>
+              <option>Madya</option>
+              <option>Utama</option>
+              <option>Paripurna</option>
+            </select>
+            <select id="f-sifat" aria-label="Sifat">
+              <option value="">Wajib &amp; substitusi</option>
+              <option>Wajib</option>
+              <option>Substitusi</option>
+            </select>
+            <button class="chip" id="picked" type="button" hidden></button>
+            <span class="count" id="count"></span>
+          </div>
         </div>
         <div class="tbox">
           <table class="gap">
@@ -218,34 +220,39 @@
         </div>
 
         <!-- Advanced Filter Toolbar -->
-        <div class="tools all-tools">
-          <input type="search" id="all-q" placeholder="Cari nama komponen, kode, kelompok, group..."
-            aria-label="Cari seluruh komponen" style="flex:1 1 18rem;">
-          <select id="all-f-layanan" aria-label="Pilih Layanan">
-            <option value="">Semua 24 Layanan</option>
-          </select>
-          <select id="all-f-komp" aria-label="Komponen">
-            <option value="">Semua Komponen</option>
-            <option value="SDM">SDM</option>
-            <option value="Alkes">Alkes &amp; Sarana</option>
-          </select>
-          <select id="all-f-strata" aria-label="Strata">
-            <option value="">Semua Strata</option>
-            <option value="Dasar">Dasar</option>
-            <option value="Madya">Madya</option>
-            <option value="Utama">Utama</option>
-            <option value="Paripurna">Paripurna</option>
-          </select>
-          <select id="all-f-status" aria-label="Status Sifat">
-            <option value="">Semua Status</option>
-            <option value="Wajib">Wajib</option>
-            <option value="Substitusi">Substitusi</option>
-          </select>
-          <select id="all-f-kondisi" aria-label="Kondisi Pemenuhan">
-            <option value="">Semua Kondisi</option>
-            <option value="ada">Terpenuhi (Jumlah &gt; 0)</option>
-            <option value="kosong">Belum Ada (Jumlah = 0)</option>
-          </select>
+        <div class="filter-bar">
+          <div class="filter-row">
+            <input type="search" class="filter-search" id="all-q" placeholder="Cari nama komponen, kode, kelompok, group..."
+              aria-label="Cari seluruh komponen">
+            <button class="btn-reset" id="btn-reset-all" type="button" title="Reset semua filter">↺ Reset</button>
+          </div>
+          <div class="filter-row">
+            <select id="all-f-layanan" aria-label="Pilih Layanan">
+              <option value="">Semua 24 Layanan</option>
+            </select>
+            <select id="all-f-komp" aria-label="Komponen">
+              <option value="">Semua Komponen</option>
+              <option value="SDM">SDM</option>
+              <option value="Alkes">Alkes &amp; Sarana</option>
+            </select>
+            <select id="all-f-strata" aria-label="Strata">
+              <option value="">Semua Strata</option>
+              <option value="Dasar">Dasar</option>
+              <option value="Madya">Madya</option>
+              <option value="Utama">Utama</option>
+              <option value="Paripurna">Paripurna</option>
+            </select>
+            <select id="all-f-status" aria-label="Status Sifat">
+              <option value="">Semua Status</option>
+              <option value="Wajib">Wajib</option>
+              <option value="Substitusi">Substitusi</option>
+            </select>
+            <select id="all-f-kondisi" aria-label="Kondisi Pemenuhan">
+              <option value="">Semua Kondisi</option>
+              <option value="ada">Terpenuhi (Jumlah &gt; 0)</option>
+              <option value="kosong">Belum Ada (Jumlah = 0)</option>
+            </select>
+          </div>
         </div>
 
         <!-- RS Online Styled Table -->
@@ -295,7 +302,6 @@
   </div>
   <div class="toast" id="toast" hidden></div>
   <script src="vendor/papaparse.min.js"></script>
-  <script src="vendor/exceljs.min.js"></script>
   <script src="data/seed.js"></script>
   <script src="assets/app.js"></script>
 </body>
