@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kompetensi Layanan RSUD Kilisuci</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <div>
+      <div class="eyebrow">RSUD Kilisuci · Komponen kompetensi RS Online</div>
+      <h1>Kompetensi Layanan RSUD Kilisuci</h1>
+      <p class="lead" id="lead">Memuat data…</p>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="btn-upload" type="button">Unggah CSV</button>
+      <button class="btn" id="btn-xlsx" type="button">Unduh rekap Excel</button>
+      <button class="btn" id="btn-tpl" type="button">Unduh template CSV</button>
+    </div>
+  </header>
+
+  <section class="card" id="data">
+    <div class="data">
+      <div>
+        <h2>Sumber data</h2>
+        <p class="note">Unggah CSV hasil ekspor RS Online, satu file per layanan dan komponen (mis. <span class="mono">4. Neonatus - Alkes.csv</span>) atau satu file gabungan. File baru menggantikan data layanan + komponen yang sama.</p>
+        <div class="drop" id="drop">
+          <button class="btn" id="btn-pick" type="button">Pilih file CSV</button>
+          <p>atau tarik file ke sini. Bisa banyak file sekaligus.</p>
+          <input type="file" id="file" accept=".csv,.txt,text/csv" multiple hidden>
+        </div>
+        <ul class="msgs" id="msgs"></ul>
+        <div class="actions" style="margin-top:12px">
+          <button class="btn" id="btn-reset" type="button">Kembali ke data rekap 17 Okt 2026</button>
+          <button class="btn" id="btn-clear" type="button">Kosongkan semua data</button>
+        </div>
+        <div class="actions" id="confirm-clear" hidden style="margin-top:8px">
+          <span class="note" style="margin:0">Hapus semua data dari tampilan ini?</span>
+          <button class="btn" id="btn-clear-yes" type="button">Ya, kosongkan</button>
+          <button class="btn" id="btn-clear-no" type="button">Batal</button>
+        </div>
+        <div class="status-line" id="src-line"></div>
+      </div>
+      <div>
+        <h2>Kelengkapan 24 layanan</h2>
+        <p class="note"><span class="tag on">CSV</span> dari file Anda · <span class="tag seed">rekap</span> data bawaan 17 Okt · <span class="tag off">kosong</span> belum ada data</p>
+        <div class="cov" id="cov"></div>
+      </div>
+    </div>
+    <details class="help" style="margin-top:16px">
+      <summary>Format CSV yang dibaca</summary>
+      <p class="note">Kolom sama dengan tabel PDF RS Online. Urutan bebas, pemisah koma, titik koma, atau tab. Huruf besar/kecil tidak berpengaruh.</p>
+      <div class="scrollx"><table>
+        <tr><th>Kolom</th><th>Wajib?</th><th>Isi</th></tr>
+        <tr><td><code>No Layanan</code>, <code>Layanan</code></td><td>Salah satu, atau dari nama file</td><td>Nomor 1–24 dan/atau nama layanan. Kalau kosong, diambil dari nama file <code>5. Neoplasma - SDM.csv</code>.</td></tr>
+        <tr><td><code>Strata</code></td><td>Ya</td><td>Dasar, Madya, Utama, atau Paripurna</td></tr>
+        <tr><td><code>Nama</code></td><td>Ya</td><td>Nama SDM / alat / sarana</td></tr>
+        <tr><td><code>Kelompok</code></td><td>Disarankan</td><td>SDM Medis, Alat Kesehatan, atau Sarana. Menentukan komponen SDM vs Alkes.</td></tr>
+        <tr><td><code>Status</code></td><td>Ya</td><td>wajib atau substitusi</td></tr>
+        <tr><td><code>Jumlah</code></td><td>Ya</td><td>Jumlah yang dimiliki RS (angka)</td></tr>
+        <tr><td><code>Group</code></td><td>Ya</td><td>Kode group, mis. <code>ksdm01</code>, <code>kalkes05</code>, <code>ksarana02</code></td></tr>
+        <tr><td><code>Kode</code>, <code>No</code>, <code>Kategori Nakes</code></td><td>Tidak</td><td>Ikut disimpan, tidak dipakai menghitung</td></tr>
+      </table></div>
+      <p class="note">Aturan hitung: satu <b>group</b> terpenuhi bila semua item <b>wajib</b> di group itu berjumlah &gt; 0 dan, kalau ada item <b>substitusi</b>, minimal satu berjumlah &gt; 0.</p>
+    </details>
+  </section>
+
+  <section class="kpis" id="kpis">
+    <div class="card kpi"><div class="lbl">Pemenuhan keseluruhan</div><div class="big" id="k-pct">–</div><div class="meter"><i id="k-bar" style="width:0"></i></div><div class="sub" id="k-pct-sub"></div></div>
+    <div class="card kpi"><div class="lbl">Strata layanan lengkap</div><div class="big" id="k-strata">–</div><div class="sub" id="k-strata-sub"></div></div>
+    <div class="card kpi"><div class="lbl">Group belum terpenuhi</div><div class="big" id="k-gap">–</div><div class="sub" id="k-gap-sub"></div></div>
+    <div class="card kpi bad"><div class="lbl">Kekurangan bersifat wajib</div><div class="big" id="k-wajib">–</div><div class="sub">tidak bisa diganti item lain</div></div>
+  </section>
+
+  <section class="two">
+    <div class="card" id="peta">
+      <h2>Peta pemenuhan per layanan</h2>
+      <p class="note">% group (SDM + alkes + sarana) yang terpenuhi per strata. Klik sel atau nama layanan untuk memfilter daftar kekurangan.</p>
+      <div class="mx-box chart" id="mx"></div>
+      <div class="legend"><span><i style="background:var(--ok-bg);border:1px solid var(--ok)"></i>100%</span><span><i style="background:var(--warn-bg);border:1px solid var(--warn)"></i>70–99%</span><span><i style="background:var(--bad-bg);border:1px solid var(--bad)"></i>di bawah 70%</span><span>– tidak dipersyaratkan</span></div>
+    </div>
+    <div class="card" id="per-layanan">
+      <h2>Jumlah kekurangan per layanan</h2>
+      <p class="note">Group belum terpenuhi, semua strata digabung. Klik batang untuk memfilter.</p>
+      <div class="chart" id="bars"></div>
+      <div class="legend"><span><i style="background:var(--c-sdm)"></i>SDM</span><span><i style="background:var(--c-alk)"></i>Alkes &amp; sarana</span></div>
+    </div>
+  </section>
+
+  <section class="card" id="berulang">
+    <h2>Kekurangan yang muncul di banyak layanan</h2>
+    <p class="note">Satu pengadaan atau rekrutmen untuk item ini menutup kekurangan di beberapa layanan sekaligus. Nama item diseragamkan (mis. semua varian CT-Scan dihitung satu).</p>
+    <div class="chart" id="top"></div>
+  </section>
+
+  <section class="card" id="daftar">
+    <h2>Daftar kekurangan per group</h2>
+    <p class="note">Satu baris per group yang belum terpenuhi, dengan item yang belum ada.</p>
+    <div class="tools">
+      <input type="search" id="q" placeholder="Cari item, kode group, layanan…" aria-label="Cari">
+      <select id="f-komp" aria-label="Komponen"><option value="">Semua komponen</option><option value="SDM">SDM</option><option value="Alkes">Alkes &amp; sarana</option></select>
+      <select id="f-strata" aria-label="Strata"><option value="">Semua strata</option><option>Dasar</option><option>Madya</option><option>Utama</option><option>Paripurna</option></select>
+      <select id="f-sifat" aria-label="Sifat"><option value="">Wajib &amp; substitusi</option><option>Wajib</option><option>Substitusi</option></select>
+      <button class="chip" id="picked" type="button" hidden></button>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="tbox">
+      <table class="gap">
+        <thead><tr>
+          <th data-k="no"><button type="button">Layanan</button></th>
+          <th data-k="strata"><button type="button">Strata</button></th>
+          <th data-k="komponen"><button type="button">Komponen</button></th>
+          <th data-k="group" class="hide-sm"><button type="button">Group</button></th>
+          <th data-k="kurang"><button type="button">Belum terpenuhi</button></th>
+          <th data-k="sifat"><button type="button">Sifat</button></th>
+        </tr></thead>
+        <tbody id="tb"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script src="vendor/papaparse.min.js"></script>
+<script src="vendor/exceljs.min.js"></script>
+<script src="data/seed.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+.git
+.agents
+.gemini
+*.zip
+*.tar.gz
+*.log
+cookies.txt
+docker-compose*.override.yml

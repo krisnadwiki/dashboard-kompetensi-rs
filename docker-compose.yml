@@ -1,0 +1,85 @@
+services:
+  # ─── Nginx Web Server ────────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: kompetensi_nginx
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8088}:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./app/public:/var/www/html/public:ro
+      - ./app/assets:/var/www/html/assets:ro
+      # Static dashboard (original HTML app)
+      - ./index.html:/var/www/html/static-dashboard/index.html:ro
+      - ./assets:/var/www/html/static-dashboard/assets:ro
+      - ./data:/var/www/html/static-dashboard/data:ro
+      - ./vendor:/var/www/html/static-dashboard/vendor:ro
+      - ./template:/var/www/html/static-dashboard/template:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    environment:
+      - TZ=Asia/Jakarta
+
+  # ─── PHP-FPM Application ─────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: kompetensi_app
+    restart: unless-stopped
+    volumes:
+      - ./app:/var/www/html
+      - ./data:/var/www/html/data:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - TZ=Asia/Jakarta
+      - APP_ENV=${APP_ENV:-production}
+      - APP_KEY=${APP_KEY:-change-this-32char-secret-key-x}
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=${DB_NAME:-kompetensi_rs}
+      - DB_USER=${DB_USER:-kompetensi}
+      - DB_PASS=${DB_PASS:-Kompetensi@2026!}
+    healthcheck:
+      test: ["CMD-SHELL", "pidof php-fpm || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # ─── MySQL Database ───────────────────────────────────────────────────────────
+  db:
+    image: mysql:8.4
+    container_name: kompetensi_db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASS:-RootKompetensi@2026!}
+      - MYSQL_DATABASE=${DB_NAME:-kompetensi_rs}
+      - MYSQL_USER=${DB_USER:-kompetensi}
+      - MYSQL_PASSWORD=${DB_PASS:-Kompetensi@2026!}
+      - TZ=Asia/Jakarta
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "${DB_PORT_HOST:-3309}:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${DB_ROOT_PASS:-RootKompetensi@2026!}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  mysql_data:
+    driver: local

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kompetensi Layanan RSUD Kilisuci</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230d6b5a'/%3E%3Cpath d='M14 8h4v6h6v4h-6v6h-4v-6H8v-4h6z' fill='%23ffffff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <div>
+      <div class="eyebrow" style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
+        <span style="background:rgba(59,110,240,0.12); color:var(--primary); padding:2px 8px; border-radius:6px; font-weight:700;">RSUD KILISUCI</span>
+        <span>&bull; Monitoring Terstandar 24 Layanan RS Online</span>
+        <span class="tag on" id="live-tag" style="display:inline-flex; align-items:center; gap:4px;">● Data Terkini</span>
+      </div>
+      <h1>Kompetensi Layanan RSUD Kilisuci</h1>
+      <p class="lead" id="lead">Memuat data terkini dari server…</p>
+    </div>
+    <div class="actions">
+      <button class="btn" id="btn-theme" type="button" title="Ganti mode tema (Terang / Gelap / Sistem)">🌓 Tema</button>
+      <button class="btn primary" id="btn-all-csv" type="button" title="Unduh semua 24 layanan dalam format CSV">Unduh Semua CSV</button>
+      <button class="btn" id="btn-xlsx" type="button">Unduh rekap Excel</button>
+      <a href="/login" class="btn" style="background:var(--primary); color:#fff; border-color:var(--primary); font-weight:600;" title="Login petugas rumah sakit">🔐 Masuk SIMRS</a>
+    </div>
+  </header>
+
+  <!-- Overview Kelengkapan 24 Layanan Terstandar -->
+  <section class="card" id="data">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+      <div>
+        <h2 style="margin:0; font-size:1rem; font-weight:600;">Status Kelengkapan 24 Layanan</h2>
+        <div class="status-line" id="src-line" style="margin-top:2px;"></div>
+      </div>
+      <div style="font-size:0.8rem; color:var(--muted); display:flex; align-items:center; gap:8px;">
+        <span class="tag on">Tersedia</span> Data aktif &bull; <span class="tag off">Kosong</span> Belum terisi
+      </div>
+    </div>
+    <div class="cov" id="cov"></div>
+    <ul class="msgs" id="msgs" style="margin-top:10px;"></ul>
+  </section>
+
+  <section class="kpis" id="kpis">
+    <div class="card kpi"><div class="lbl">Pemenuhan keseluruhan</div><div class="big" id="k-pct">–</div><div class="meter"><i id="k-bar" style="width:0"></i></div><div class="sub" id="k-pct-sub"></div></div>
+    <div class="card kpi"><div class="lbl">Strata layanan lengkap</div><div class="big" id="k-strata">–</div><div class="sub" id="k-strata-sub"></div></div>
+    <div class="card kpi"><div class="lbl">Group belum terpenuhi</div><div class="big" id="k-gap">–</div><div class="sub" id="k-gap-sub"></div></div>
+    <div class="card kpi bad"><div class="lbl">Kekurangan bersifat wajib</div><div class="big" id="k-wajib">–</div><div class="sub">tidak bisa diganti item lain</div></div>
+  </section>
+
+  <section class="two">
+    <div class="card" id="peta">
+      <h2>Peta pemenuhan per layanan</h2>
+      <p class="note">% group (SDM + alkes + sarana) yang terpenuhi per strata. Klik sel atau nama layanan untuk memfilter daftar kekurangan.</p>
+      <div class="mx-box chart" id="mx"></div>
+      <div class="legend"><span><i style="background:var(--ok-bg);border:1px solid var(--ok)"></i>100%</span><span><i style="background:var(--warn-bg);border:1px solid var(--warn)"></i>70–99%</span><span><i style="background:var(--bad-bg);border:1px solid var(--bad)"></i>di bawah 70%</span><span>– tidak dipersyaratkan</span></div>
+    </div>
+    <div class="card" id="per-layanan">
+      <h2>Jumlah kekurangan per layanan</h2>
+      <p class="note">Group belum terpenuhi, semua strata digabung. Klik batang untuk memfilter.</p>
+      <div class="chart" id="bars"></div>
+      <div class="legend"><span><i style="background:var(--c-sdm)"></i>SDM</span><span><i style="background:var(--c-alk)"></i>Alkes &amp; sarana</span></div>
+    </div>
+  </section>
+
+  <section class="card" id="berulang">
+    <h2>Kekurangan yang muncul di banyak layanan</h2>
+    <p class="note">Satu pengadaan atau rekrutmen untuk item ini menutup kekurangan di beberapa layanan sekaligus. Nama item diseragamkan (mis. semua varian CT-Scan dihitung satu).</p>
+    <div class="chart" id="top"></div>
+  </section>
+
+  <section class="card" id="daftar">
+    <h2>Daftar kekurangan per group</h2>
+    <p class="note">Satu baris per group yang belum terpenuhi, dengan item yang belum ada.</p>
+    <div class="tools">
+      <input type="search" id="q" placeholder="Cari item, kode group, layanan…" aria-label="Cari">
+      <select id="f-komp" aria-label="Komponen"><option value="">Semua komponen</option><option value="SDM">SDM</option><option value="Alkes">Alkes &amp; sarana</option></select>
+      <select id="f-strata" aria-label="Strata"><option value="">Semua strata</option><option>Dasar</option><option>Madya</option><option>Utama</option><option>Paripurna</option></select>
+      <select id="f-sifat" aria-label="Sifat"><option value="">Wajib &amp; substitusi</option><option>Wajib</option><option>Substitusi</option></select>
+      <button class="chip" id="picked" type="button" hidden></button>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="tbox">
+      <table class="gap">
+        <thead><tr>
+          <th data-k="no"><button type="button">Layanan</button></th>
+          <th data-k="strata"><button type="button">Strata</button></th>
+          <th data-k="komponen"><button type="button">Komponen</button></th>
+          <th data-k="group" class="hide-sm"><button type="button">Group</button></th>
+          <th data-k="kurang"><button type="button">Belum terpenuhi</button></th>
+          <th data-k="sifat"><button type="button">Sifat</button></th>
+        </tr></thead>
+        <tbody id="tb"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script src="vendor/papaparse.min.js"></script>
+<script src="vendor/exceljs.min.js"></script>
+<script src="data/seed.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
