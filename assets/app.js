@@ -433,44 +433,251 @@ function renderStrataSummary() {
     byNo.get(r.no).push(r);
   }
 
-  const counts = { none: 0, Dasar: 0, Madya: 0, Utama: 0, Paripurna: 0 };
+  const LABELS = { none: "Tidak Kompeten", Dasar: "Dasar", Madya: "Madya", Utama: "Utama", Paripurna: "Paripurna" };
+  const buckets = { none: [], Dasar: [], Madya: [], Utama: [], Paripurna: [] };
 
   for (let i = 1; i <= 24; i++) {
-    const rs = byNo.get(i);
-    if (!rs) { counts.none++; continue; }
+    const rs = byNo.get(i) || [];
     const metStrata = rs.filter((r) => r.status === "Terpenuhi");
+    const totalOk = rs.reduce((a, r) => a + r.ok, 0);
+    const totalN = rs.reduce((a, r) => a + r.n, 0);
+    const allPct = totalN > 0 ? (totalOk / totalN) * 100 : 0;
+
+    const svcGaps = model.gaps ? model.gaps.filter((g) => g.no === i) : [];
+    const sdmGaps = svcGaps.filter((g) => g.komp === "SDM").length;
+    const alkGaps = svcGaps.filter((g) => g.komp !== "SDM").length;
+    const wajibGaps = svcGaps.filter((g) => g.sifat !== "Substitusi").length;
+
+    const item = {
+      no: i,
+      layanan: LAYANAN[i],
+      pct: allPct,
+      totalGaps: svcGaps.length,
+      sdmGaps,
+      alkGaps,
+      wajibGaps,
+      rs
+    };
+
     if (metStrata.length === 0) {
-      counts.none++;
+      buckets.none.push(item);
     } else {
       let highest = metStrata[0].strata;
       for (const r of metStrata) {
         if (SORD[r.strata] > SORD[highest]) highest = r.strata;
       }
-      counts[highest]++;
+      buckets[highest].push(item);
     }
   }
 
-  const segs = [
-    { id: "seg-none", cnt: counts.none },
-    { id: "seg-dasar", cnt: counts.Dasar },
-    { id: "seg-madya", cnt: counts.Madya },
-    { id: "seg-utama", cnt: counts.Utama },
-    { id: "seg-paripurna", cnt: counts.Paripurna },
-  ];
+  // Update counts, percentages & chip states
+  Object.entries(buckets).forEach(([key, arr]) => {
+    const kLower = key === "none" ? "none" : key.toLowerCase();
+    const cntEl = $("cnt-" + kLower);
+    if (cntEl) cntEl.textContent = arr.length;
+    const pctEl = $("pct-" + kLower);
+    if (pctEl) pctEl.textContent = ((arr.length / 24) * 100).toFixed(0) + "%";
 
-  segs.forEach((s) => {
-    const segEl = $(s.id);
-    if (segEl) {
-      segEl.style.width = s.cnt > 0 ? (s.cnt / 24 * 100) + "%" : "0%";
-      segEl.textContent = s.cnt > 0 ? s.cnt : "";
+    const card = $("strata-summary");
+    const chipEl = card?.querySelector(".chip-" + kLower);
+    if (chipEl) {
+      chipEl.classList.toggle("is-zero", arr.length === 0);
     }
   });
 
-  $("cnt-none") && ($("cnt-none").textContent = counts.none);
-  $("cnt-dasar") && ($("cnt-dasar").textContent = counts.Dasar);
-  $("cnt-madya") && ($("cnt-madya").textContent = counts.Madya);
-  $("cnt-utama") && ($("cnt-utama").textContent = counts.Utama);
-  $("cnt-paripurna") && ($("cnt-paripurna").textContent = counts.Paripurna);
+  // Store for click handler
+  renderStrataSummary._buckets = buckets;
+  renderStrataSummary._labels = LABELS;
+
+  const detail = $("strata-detail");
+  const activeKey = (detail && !detail.hidden && detail.dataset.openKey) ? detail.dataset.openKey : null;
+
+  // Render SVG Donut Pie Chart
+  renderStrataPieChart(buckets, activeKey);
+
+  // If detail panel was already open, refresh its content live
+  if (detail && !detail.hidden && activeKey) {
+    renderStrataDetailView(activeKey, buckets[activeKey] || []);
+  }
+
+  // Attach click listeners once
+  const card = $("strata-summary");
+  if (card && !card._strataListenerAdded) {
+    card._strataListenerAdded = true;
+    card.addEventListener("click", (e) => {
+      const trigger = e.target.closest("[data-strata]");
+      if (!trigger) return;
+      const key = trigger.dataset.strata;
+      const bkts = renderStrataSummary._buckets;
+      if (!bkts) return;
+      const det = $("strata-detail");
+      const isAlreadyOpen = !det.hidden && det.dataset.openKey === key;
+
+      // Reset active states
+      card.querySelectorAll("[data-strata]").forEach((el) => el.classList.remove("active-strata"));
+
+      if (isAlreadyOpen) {
+        det.hidden = true;
+        det.dataset.openKey = "";
+        renderStrataPieChart(bkts, null);
+      } else {
+        card.querySelectorAll(`[data-strata="${key}"]`).forEach((el) => el.classList.add("active-strata"));
+        renderStrataDetailView(key, bkts[key] || []);
+        det.hidden = false;
+        det.dataset.openKey = key;
+        renderStrataPieChart(bkts, key);
+      }
+    });
+  }
+}
+
+function renderStrataPieChart(buckets, activeKey) {
+  const box = $("strata-pie-box");
+  if (!box) return;
+
+  const COLORS = {
+    none: "#ef4444",
+    Dasar: "#10b981",
+    Madya: "#0ea5e9",
+    Utama: "#8b5cf6",
+    Paripurna: "#f59e0b"
+  };
+
+  const keys = ["none", "Dasar", "Madya", "Utama", "Paripurna"];
+  const total = 24;
+  const r = 38;
+  const C = 2 * Math.PI * r;
+
+  const svg = svgEl("svg", { viewBox: "0 0 100 100", role: "img", "aria-label": "Sebaran Strata" });
+
+  // Background ring
+  svg.appendChild(svgEl("circle", {
+    cx: "50",
+    cy: "50",
+    r: String(r),
+    fill: "none",
+    stroke: "var(--line)",
+    "stroke-width": "10",
+    opacity: "0.25"
+  }));
+
+  let offset = 0;
+  keys.forEach((k) => {
+    const list = buckets[k] || [];
+    const count = list.length;
+    if (count > 0) {
+      const sliceLen = (count / total) * C;
+      const isSelected = activeKey === k;
+      const circle = svgEl("circle", {
+        cx: "50",
+        cy: "50",
+        r: String(r),
+        fill: "none",
+        stroke: COLORS[k] || "var(--accent)",
+        "stroke-width": isSelected ? "14" : "10",
+        "stroke-dasharray": `${sliceLen} ${C - sliceLen}`,
+        "stroke-dashoffset": String(-offset),
+        transform: "rotate(-90 50 50)",
+        class: `strata-pie-slice ${isSelected ? "active-slice active-strata" : ""}`,
+        "data-strata": k
+      });
+
+      circle.setAttribute("title", `${k === "none" ? "Tidak Kompeten" : k}: ${count} Layanan (${((count / total) * 100).toFixed(0)}%)`);
+      svg.appendChild(circle);
+      offset += sliceLen;
+    }
+  });
+
+  // Center text (Donut Hole)
+  let centerVal = "24";
+  let centerSub = "Layanan";
+  if (activeKey && buckets[activeKey]) {
+    centerVal = String(buckets[activeKey].length);
+    centerSub = activeKey === "none" ? "Tdk Komp" : activeKey;
+  }
+
+  const textNum = svgEl("text", {
+    x: "50",
+    y: "45",
+    class: "pie-center-num"
+  }, centerVal);
+
+  const textSub = svgEl("text", {
+    x: "50",
+    y: "62",
+    class: "pie-center-sub"
+  }, centerSub);
+
+  svg.appendChild(textNum);
+  svg.appendChild(textSub);
+
+  box.replaceChildren(svg);
+}
+
+function renderStrataDetailView(key, list) {
+  const detail = $("strata-detail");
+  if (!detail) return;
+
+  const META = {
+    none: { title: "Tidak Kompeten", desc: "belum memenuhi strata dasar" },
+    Dasar: { title: "Strata Dasar", desc: "100% memenuhi strata dasar" },
+    Madya: { title: "Strata Madya", desc: "100% memenuhi hingga strata madya" },
+    Utama: { title: "Strata Utama", desc: "100% memenuhi hingga strata utama" },
+    Paripurna: { title: "Strata Paripurna", desc: "100% memenuhi strata paripurna" }
+  };
+  const meta = META[key] || { title: key, desc: "" };
+
+  const head = el("div", "scd-head");
+  const left = el("div", null);
+  left.append(
+    el("span", "scd-title", `${list.length} Layanan ${meta.title}`),
+    el("span", "scd-desc", ` (${meta.desc}) — klik layanan untuk filter tabel:`)
+  );
+  const btnClose = el("button", "scd-close", "✕ Tutup");
+  btnClose.type = "button";
+  btnClose.addEventListener("click", () => {
+    detail.hidden = true;
+    detail.dataset.openKey = "";
+    const card = $("strata-summary");
+    card?.querySelectorAll("[data-strata]").forEach((el) => el.classList.remove("active-strata"));
+  });
+  head.append(left, btnClose);
+
+  const listContainer = el("div", "scd-list");
+  if (list.length === 0) {
+    listContainer.appendChild(el("div", "scd-empty", "Tidak ada layanan dalam kategori ini."));
+  } else {
+    list.forEach((item) => {
+      const pill = el("button", "scd-pill");
+      pill.type = "button";
+      pill.title = `Klik untuk filter kekurangan: ${item.layanan}`;
+
+      const num = el("span", "p-num", `#${item.no}`);
+      const name = el("span", "p-name", item.layanan);
+      const gap = el(
+        "span",
+        "p-gap " + (item.totalGaps > 0 ? "bad" : "ok"),
+        item.totalGaps > 0 ? `${item.totalGaps} gap` : "✓ lengkap"
+      );
+
+      pill.append(num, name, gap);
+
+      pill.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        pick(item.no, null);
+        const fLay = $("f-layanan");
+        if (fLay) fLay.value = String(item.no);
+        renderTable();
+        const target = $("komponen-card") || $("daftar");
+        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+        toast(`Memfilter kekurangan untuk layanan: ${item.layanan}`);
+      });
+
+      listContainer.appendChild(pill);
+    });
+  }
+
+  detail.replaceChildren(head, listContainer);
 }
 
 const pick = (no, strata) => {
@@ -479,7 +686,10 @@ const pick = (no, strata) => {
   const fLay = $("f-layanan");
   if (fLay) fLay.value = ui.pick.no ? String(ui.pick.no) : "";
   renderMatrix(); renderBars(); renderTable();
-  if (ui.pick.no) $("daftar").scrollIntoView({ behavior: "smooth", block: "start" });
+  if (ui.pick.no) {
+    const target = $("komponen-card") || $("daftar");
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 };
 
 function tipFor(box) {

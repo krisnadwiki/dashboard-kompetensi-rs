@@ -96,39 +96,284 @@ button, a.btn { font: inherit; cursor: pointer; text-decoration: none; }
 .status-line { font-size: .8rem; color: var(--muted); margin-top: 8px; }
 /* kpi */
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: 12px; }
+.card .kpi { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; box-shadow: none; }
 .kpi .lbl { font-size: .8rem; color: var(--muted); }
-.kpi .big { font-family: var(--f-display); font-size: 2.2rem; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.kpi .big { font-family: var(--f-display); font-size: 1.85rem; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; }
 .kpi .sub { font-size: .8rem; color: var(--muted); margin-top: 4px; }
 .kpi.bad .big { color: var(--bad); }
 .meter { height: 6px; border-radius: 3px; background: var(--line); margin-top: 8px; overflow: hidden; }
 .meter i { display: block; height: 100%; background: var(--accent); }
 
-/* ─── Strata Summary Bar ────────────────────────────────────────────────── */
-.strata-bar { display: flex; height: 32px; border-radius: 8px; overflow: hidden; margin-bottom: 12px; border: 1px solid var(--line); }
-.strata-seg { display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; transition: width 0.3s ease; min-width: 0; overflow: hidden; }
-.seg-none { background: #ef4444; }
-.seg-dasar { background: #22c55e; }
-.seg-madya { background: #3b82f6; }
-.seg-utama { background: #a855f7; }
-.seg-paripurna { background: #f59e0b; }
-.strata-pills { display: flex; flex-wrap: wrap; gap: 10px; }
-.strata-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 6px 12px; border-radius: 8px; font-weight: 600; border: 1px solid var(--line); }
-.strata-pill b { font-size: 16px; font-weight: 700; }
-.strata-pill.seg-none { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
-.strata-pill.seg-dasar { background: #dcfce7; color: #15803d; border-color: #86efac; }
-.strata-pill.seg-madya { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
-.strata-pill.seg-utama { background: #f3e8ff; color: #7e22ce; border-color: #d8b4fe; }
-.strata-pill.seg-paripurna { background: #fef3c7; color: #b45309; border-color: #fcd34d; }
-:root[data-theme="dark"] .strata-pill.seg-none { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.35); }
-:root[data-theme="dark"] .strata-pill.seg-dasar { background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.35); }
-:root[data-theme="dark"] .strata-pill.seg-madya { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.35); }
-:root[data-theme="dark"] .strata-pill.seg-utama { background: rgba(168,85,247,0.15); border-color: rgba(168,85,247,0.35); }
-:root[data-theme="dark"] .strata-pill.seg-paripurna { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.35); }
-:root[data-theme="dark"] .seg-none { background: #f87171; }
-:root[data-theme="dark"] .seg-dasar { background: #4ade80; }
-:root[data-theme="dark"] .seg-madya { background: #60a5fa; }
-:root[data-theme="dark"] .seg-utama { background: #c084fc; }
-:root[data-theme="dark"] .seg-paripurna { background: #fbbf24; }
+/* ─── Compact Minimalist Strata Summary with Pie Chart ────────────────── */
+.strata-layout {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.strata-pie-col {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.strata-pie-box {
+  width: 110px;
+  height: 110px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.strata-pie-box svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  display: block;
+}
+.strata-pie-slice {
+  cursor: pointer;
+  transition: stroke-width 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s, filter 0.2s;
+}
+.strata-pie-slice:hover {
+  opacity: 0.9;
+  filter: brightness(1.15);
+}
+.strata-pie-slice.active-slice {
+  stroke-width: 17px !important;
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));
+}
+.pie-center-num {
+  font-family: var(--f-display);
+  font-weight: 700;
+  font-size: 17px;
+  fill: var(--fg);
+  text-anchor: middle;
+  dominant-baseline: auto;
+}
+.pie-center-sub {
+  font-size: 8.5px;
+  font-weight: 600;
+  fill: var(--muted);
+  text-anchor: middle;
+  dominant-baseline: auto;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.strata-info-col {
+  flex: 1;
+  min-width: 0;
+}
+.strata-info-head {
+  margin-bottom: 10px;
+}
+.strata-info-head h2 { margin: 0 0 2px 0; }
+.strata-info-head .note { margin: 0; }
+
+/* Horizontal Compact Chips Row */
+.strata-compact-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.s-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+.s-chip:hover {
+  border-color: var(--muted);
+  transform: translateY(-1px);
+}
+.s-chip.is-zero {
+  opacity: 0.45;
+  cursor: default;
+}
+.s-chip.is-zero:hover {
+  transform: none;
+  border-color: var(--line);
+}
+.s-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.dot-none { background: #ef4444; }
+.dot-dasar { background: #10b981; }
+.dot-madya { background: #0ea5e9; }
+.dot-utama { background: #8b5cf6; }
+.dot-paripurna { background: #f59e0b; }
+
+.s-name { font-weight: 500; }
+.s-cnt { font-weight: 700; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.s-pct { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Active States */
+.s-chip.active-strata {
+  border-color: currentColor;
+  box-shadow: 0 0 0 1.5px currentColor;
+}
+.chip-none.active-strata { color: #e11d48; background: rgba(244,63,94,0.08); }
+.chip-dasar.active-strata { color: #059669; background: rgba(16,185,129,0.08); }
+.chip-madya.active-strata { color: #0284c7; background: rgba(14,165,233,0.08); }
+.chip-utama.active-strata { color: #7c3aed; background: rgba(139,92,246,0.08); }
+.chip-paripurna.active-strata { color: #d97706; background: rgba(245,158,11,0.08); }
+
+:root[data-theme="dark"] .chip-none.active-strata { color: #fb7185; }
+:root[data-theme="dark"] .chip-dasar.active-strata { color: #34d399; }
+:root[data-theme="dark"] .chip-madya.active-strata { color: #38bdf8; }
+:root[data-theme="dark"] .chip-utama.active-strata { color: #c084fc; }
+:root[data-theme="dark"] .chip-paripurna.active-strata { color: #fbbf24; }
+
+/* ─── Compact Detail Panel ────────────────────────────────────────────── */
+.strata-compact-detail {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  animation: strataQuickOpen 0.15s ease;
+}
+@keyframes strataQuickOpen {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.scd-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.scd-title { font-weight: 600; color: var(--fg); }
+.scd-desc { color: var(--muted); font-size: 11.5px; }
+.scd-close {
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.scd-close:hover { color: var(--fg); border-color: var(--fg); }
+
+.scd-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.scd-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--fg);
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s;
+}
+.scd-pill:hover {
+  border-color: var(--fg);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+.scd-pill .p-num {
+  font-family: var(--f-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.scd-pill .p-name { font-weight: 500; }
+.scd-pill .p-gap {
+  font-size: 10.5px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+.scd-pill .p-gap.bad { background: rgba(239,68,68,0.12); color: #ef4444; }
+.scd-pill .p-gap.ok { background: rgba(16,185,129,0.12); color: #10b981; }
+.scd-empty { font-size: 12px; color: var(--muted); padding: 6px 0; }
+
+/* ─── Mobile View Optimization (max-width: 680px) ─────────────────────── */
+@media (max-width: 680px) {
+  .strata-layout {
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+  }
+  .strata-pie-col {
+    margin: 0 auto;
+  }
+  .strata-pie-box {
+    width: 120px;
+    height: 120px;
+  }
+  .strata-info-col {
+    width: 100%;
+  }
+  .strata-info-head {
+    text-align: center;
+    margin-bottom: 12px;
+  }
+  .strata-compact-chips {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    width: 100%;
+  }
+  .s-chip {
+    justify-content: space-between;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .s-chip:last-child:nth-child(odd) {
+    grid-column: span 2;
+  }
+  .scd-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .scd-close {
+    align-self: flex-end;
+  }
+  .scd-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .scd-pill {
+    width: 100%;
+    justify-content: space-between;
+    padding: 8px 10px;
+  }
+}
 .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr)); gap: 16px; }
 /* matrix */
 .mx-box { overflow-x: auto; }

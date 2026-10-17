@@ -31,7 +31,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-  <link rel="stylesheet" href="assets/app.css">
+  <link rel="stylesheet" href="assets/app.css?v=20261017_2355">
 </head>
 
 <body>
@@ -62,63 +62,102 @@
           <h2 style="margin:0; font-size:1rem; font-weight:600;">Status Kelengkapan 24 Layanan</h2>
           <span id="data-status-badge" class="tag on" style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem;">Memuat...</span>
         </div>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <div style="font-size:0.8rem; color:var(--muted); display:flex; align-items:center; gap:8px;">
-            <span class="tag on">Tersedia</span> Data aktif &bull; <span class="tag off">Kosong</span> Belum terisi
-          </div>
+        <div>
           <button type="button" id="data-toggle-btn" class="btn" style="padding:3px 10px; font-size:0.75rem; border-radius:6px;">
             <span id="data-toggle-icon">▼</span> <span id="data-toggle-text">Buka Rincian</span>
           </button>
         </div>
       </div>
       <div class="status-line" id="src-line" style="margin-top:4px;"></div>
-      <div id="data-collapse-body" style="margin-top:12px; display:none;">
+      <div id="data-collapse-body" style="margin-top:14px; display:none;">
+        <!-- KPI Metrics (Moved inside Accordion) -->
+        <div class="kpis" id="kpis" style="margin-bottom:16px;">
+          <div class="card kpi">
+            <div class="lbl">Pemenuhan keseluruhan</div>
+            <div class="big" id="k-pct">–</div>
+            <div class="meter"><i id="k-bar" style="width:0"></i></div>
+            <div class="sub" id="k-pct-sub"></div>
+          </div>
+          <div class="card kpi">
+            <div class="lbl">Strata layanan lengkap</div>
+            <div class="big" id="k-strata">–</div>
+            <div class="sub" id="k-strata-sub"></div>
+          </div>
+          <div class="card kpi">
+            <div class="lbl">Group belum terpenuhi</div>
+            <div class="big" id="k-gap">–</div>
+            <div class="sub" id="k-gap-sub"></div>
+          </div>
+          <div class="card kpi bad">
+            <div class="lbl">Kekurangan bersifat wajib</div>
+            <div class="big" id="k-wajib">–</div>
+            <div class="sub">tidak bisa diganti item lain</div>
+          </div>
+        </div>
+
+        <!-- Legend Moved Inside Expanded Accordion -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px; font-size:0.8rem; color:var(--muted);">
+          <span>Rincian kelengkapan SDM &amp; Alkes per layanan:</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="tag on">Tersedia</span> Data aktif &bull; <span class="tag off">Kosong</span> Belum terisi
+          </div>
+        </div>
+
         <div class="cov" id="cov"></div>
         <ul class="msgs" id="msgs" style="margin-top:10px;"></ul>
       </div>
     </section>
 
-    <section class="kpis" id="kpis">
-      <div class="card kpi">
-        <div class="lbl">Pemenuhan keseluruhan</div>
-        <div class="big" id="k-pct">–</div>
-        <div class="meter"><i id="k-bar" style="width:0"></i></div>
-        <div class="sub" id="k-pct-sub"></div>
-      </div>
-      <div class="card kpi">
-        <div class="lbl">Strata layanan lengkap</div>
-        <div class="big" id="k-strata">–</div>
-        <div class="sub" id="k-strata-sub"></div>
-      </div>
-      <div class="card kpi">
-        <div class="lbl">Group belum terpenuhi</div>
-        <div class="big" id="k-gap">–</div>
-        <div class="sub" id="k-gap-sub"></div>
-      </div>
-      <div class="card kpi bad">
-        <div class="lbl">Kekurangan bersifat wajib</div>
-        <div class="big" id="k-wajib">–</div>
-        <div class="sub">tidak bisa diganti item lain</div>
-      </div>
-    </section>
-
     <section class="card" id="strata-summary">
-      <h2>Distribusi Tingkat Kompetensi 24 Layanan</h2>
-      <p class="note">Tingkat kompetensi tertinggi yang terpenuhi per layanan.</p>
-      <div class="strata-bar">
-        <div class="strata-seg seg-none" id="seg-none"></div>
-        <div class="strata-seg seg-dasar" id="seg-dasar"></div>
-        <div class="strata-seg seg-madya" id="seg-madya"></div>
-        <div class="strata-seg seg-utama" id="seg-utama"></div>
-        <div class="strata-seg seg-paripurna" id="seg-paripurna"></div>
+      <div class="strata-layout">
+        <!-- SVG Donut / Pie Chart Sebaran Strata -->
+        <div class="strata-pie-col">
+          <div class="strata-pie-box" id="strata-pie-box" role="img" aria-label="Grafik Pie Sebaran Strata"></div>
+        </div>
+
+        <!-- Info & Strata Chips Column -->
+        <div class="strata-info-col">
+          <div class="strata-info-head">
+            <h2>Distribusi Tingkat Kompetensi 24 Layanan</h2>
+            <p class="note">Capaian strata tertinggi 100% per layanan. Klik segmen grafik atau label untuk melihat daftar layanan.</p>
+          </div>
+
+          <div class="strata-compact-chips">
+            <button type="button" class="s-chip chip-none" data-strata="none">
+              <span class="s-dot dot-none"></span>
+              <span class="s-name">Tidak Kompeten</span>
+              <b class="s-cnt" id="cnt-none">0</b>
+              <span class="s-pct" id="pct-none">0%</span>
+            </button>
+            <button type="button" class="s-chip chip-dasar" data-strata="Dasar">
+              <span class="s-dot dot-dasar"></span>
+              <span class="s-name">Dasar</span>
+              <b class="s-cnt" id="cnt-dasar">0</b>
+              <span class="s-pct" id="pct-dasar">0%</span>
+            </button>
+            <button type="button" class="s-chip chip-madya" data-strata="Madya">
+              <span class="s-dot dot-madya"></span>
+              <span class="s-name">Madya</span>
+              <b class="s-cnt" id="cnt-madya">0</b>
+              <span class="s-pct" id="pct-madya">0%</span>
+            </button>
+            <button type="button" class="s-chip chip-utama" data-strata="Utama">
+              <span class="s-dot dot-utama"></span>
+              <span class="s-name">Utama</span>
+              <b class="s-cnt" id="cnt-utama">0</b>
+              <span class="s-pct" id="pct-utama">0%</span>
+            </button>
+            <button type="button" class="s-chip chip-paripurna" data-strata="Paripurna">
+              <span class="s-dot dot-paripurna"></span>
+              <span class="s-name">Paripurna</span>
+              <b class="s-cnt" id="cnt-paripurna">0</b>
+              <span class="s-pct" id="pct-paripurna">0%</span>
+            </button>
+          </div>
+        </div>
       </div>
-      <div class="strata-pills">
-        <span class="strata-pill seg-none"><b id="cnt-none">0</b> Tidak Kompeten</span>
-        <span class="strata-pill seg-dasar"><b id="cnt-dasar">0</b> Dasar</span>
-        <span class="strata-pill seg-madya"><b id="cnt-madya">0</b> Madya</span>
-        <span class="strata-pill seg-utama"><b id="cnt-utama">0</b> Utama</span>
-        <span class="strata-pill seg-paripurna"><b id="cnt-paripurna">0</b> Paripurna</span>
-      </div>
+
+      <div class="strata-compact-detail" id="strata-detail" hidden></div>
     </section>
 
     <section class="two">
@@ -321,8 +360,8 @@
   </div>
   <div class="toast" id="toast" hidden></div>
   <script src="vendor/papaparse.min.js"></script>
-  <script src="data/seed.js"></script>
-  <script src="assets/app.js"></script>
+  <script src="data/seed.js?v=20261017_2355"></script>
+  <script src="assets/app.js?v=20261017_2355"></script>
 </body>
 
 </html>
