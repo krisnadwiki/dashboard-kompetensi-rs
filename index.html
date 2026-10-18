@@ -7,9 +7,11 @@
   <meta name="description" content="Monitoring kompetensi layanan RSUD Kilisuci — data SDM dan alat kesehatan real-time, terintegrasi SIRS Online Kemenkes.">
   <meta name="theme-color" content="#3b6ef0">
   <title>Kompetensi Layanan RSUD Kilisuci</title>
-  <link rel="icon" type="image/svg+xml"
-    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233b6ef0'/%3E%3Cpath d='M14 8h4v6h6v4h-6v6h-4v-6H8v-4h6z' fill='%23ffffff'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
   <link rel="apple-touch-icon" href="https://kompetensi.rsudkilisuci.web.id/assets/img/og-image.png">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
   <!-- ─── Open Graph / WhatsApp / Facebook ──────────────────────────────── -->
   <meta property="og:title" content="Kompetensi Layanan RSUD Kilisuci">
@@ -50,8 +52,7 @@
         <p class="lead" id="lead">Memuat data terkini dari server&hellip;</p>
       </div>
       <div class="actions">
-        <button class="btn" id="btn-theme" type="button" title="Ganti mode tema (Terang / Gelap / Sistem)">🌓
-          Tema</button>
+        <button class="btn" id="btn-theme" type="button" title="Ganti mode tema (Terang / Gelap / Sistem)"><i class="fa-solid fa-circle-half-stroke"></i> Tema</button>
       </div>
     </header>
 
@@ -64,7 +65,7 @@
         </div>
         <div>
           <button type="button" id="data-toggle-btn" class="btn" style="padding:3px 10px; font-size:0.75rem; border-radius:6px;">
-            <span id="data-toggle-icon">▼</span> <span id="data-toggle-text">Buka Rincian</span>
+            <span id="data-toggle-icon"><i class="fa-solid fa-chevron-down"></i></span> <span id="data-toggle-text">Buka Rincian</span>
           </button>
         </div>
       </div>
@@ -191,12 +192,12 @@
     <section class="card" id="komponen-card">
       <div class="section-nav-tabs">
         <button type="button" class="tab-btn active" id="tab-btn-gap" data-target="panel-gap">
-          <span class="tab-icon">⚠️</span>
+          <span class="tab-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
           <span class="tab-text">Daftar Kekurangan (Analisis Gap)</span>
           <span class="tab-count" id="badge-gap-count">0</span>
         </button>
         <button type="button" class="tab-btn" id="tab-btn-all" data-target="panel-all">
-          <span class="tab-icon">🏥</span>
+          <span class="tab-icon"><i class="fa-solid fa-hospital"></i></span>
           <span class="tab-text">Seluruh Detil Komponen (RS Online Asli)</span>
           <span class="tab-count" id="badge-all-count">0</span>
         </button>
@@ -214,7 +215,7 @@
         <div class="filter-bar">
           <div class="filter-row">
             <input type="search" class="filter-search" id="q" placeholder="Cari item, kode group, layanan…" aria-label="Cari kekurangan">
-            <button class="btn-reset" id="btn-reset-gap" type="button" title="Reset semua filter">↺ Reset</button>
+            <button class="btn-reset" id="btn-reset-gap" type="button" title="Reset semua filter"><i class="fa-solid fa-rotate-left"></i> Reset</button>
           </div>
           <div class="filter-row">
             <select id="f-layanan" aria-label="Pilih Layanan">
@@ -282,7 +283,7 @@
           <div class="filter-row">
             <input type="search" class="filter-search" id="all-q" placeholder="Cari nama komponen, kode, kelompok, group..."
               aria-label="Cari seluruh komponen">
-            <button class="btn-reset" id="btn-reset-all" type="button" title="Reset semua filter">↺ Reset</button>
+            <button class="btn-reset" id="btn-reset-all" type="button" title="Reset semua filter"><i class="fa-solid fa-rotate-left"></i> Reset</button>
           </div>
           <div class="filter-row">
             <select id="all-f-layanan" aria-label="Pilih Layanan">
@@ -350,14 +351,25 @@
                 <option value="all">Semua</option>
               </select>
             </label>
-            <button type="button" class="btn" id="all-btn-prev" style="padding:4px 10px;">« Sebelumnya</button>
+            <button type="button" class="btn" id="all-btn-prev" style="padding:4px 10px;"><i class="fa-solid fa-angles-left"></i> Sebelumnya</button>
             <span class="page-indicator" id="all-page-indicator">Halaman 1 / 1</span>
-            <button type="button" class="btn" id="all-btn-next" style="padding:4px 10px;">Selanjutnya »</button>
+            <button type="button" class="btn" id="all-btn-next" style="padding:4px 10px;">Selanjutnya <i class="fa-solid fa-angles-right"></i></button>
           </div>
         </div>
       </div>
     </section>
   </div>
+
+  <!-- Footer -->
+  <footer class="ict-footer">
+    &copy; <span id="footer-year">2026</span> RSUD Kilisuci &mdash; ICT (Information and Communication Technology)
+  </footer>
+
+  <!-- Floating ICT Badge -->
+  <div class="ict-badge">
+    <img src="assets/badge-ict.svg" alt="ICT RSUD Kilisuci" title="ICT RSUD Kilisuci">
+  </div>
+
   <div class="toast" id="toast" hidden></div>
   <script src="vendor/papaparse.min.js"></script>
   <script src="data/seed.js?v=20261017_2355"></script>

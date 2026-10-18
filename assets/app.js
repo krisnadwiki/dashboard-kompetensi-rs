@@ -365,7 +365,7 @@ function initCoverageAccordion() {
     covUserToggled = true;
     const isClosed = body.style.display === "none";
     body.style.display = isClosed ? "block" : "none";
-    if (icon) icon.textContent = isClosed ? "▲" : "▼";
+    if (icon) icon.innerHTML = isClosed ? '<i class="fa-solid fa-chevron-up"></i>' : '<i class="fa-solid fa-chevron-down"></i>';
     if (text) text.textContent = isClosed ? "Tutup Rincian" : "Buka Rincian";
   };
 
@@ -416,11 +416,11 @@ function renderCoverage() {
   if (!covUserToggled && body) {
     if (isComplete) {
       body.style.display = "none";
-      if (icon) icon.textContent = "▼";
+      if (icon) icon.innerHTML = '<i class="fa-solid fa-chevron-down"></i>';
       if (text) text.textContent = "Buka Rincian";
     } else {
       body.style.display = "block";
-      if (icon) icon.textContent = "▲";
+      if (icon) icon.innerHTML = '<i class="fa-solid fa-chevron-up"></i>';
       if (text) text.textContent = "Tutup Rincian";
     }
   }
@@ -849,7 +849,7 @@ function renderTop() {
   hbar(box, data, {
     label: (d) => d.item,
     parts: (d) => [{ v: d.n, c: d.komp === "SDM" ? cS : cA }],
-    onClick: (d) => { $("q").value = d.item.replace(/\s*\(.*$/, ""); ui.pick = { no: null, strata: null }; renderMatrix(); renderBars(); renderTable(); $("daftar").scrollIntoView({ behavior: "smooth" }); },
+    onClick: (d) => { $("q").value = d.item.replace(/\s*\(.*$/, ""); ui.pick = { no: null, strata: null }; renderMatrix(); renderBars(); renderTable(); const t = $("komponen-card") || $("daftar"); if (t) t.scrollIntoView({ behavior: "smooth" }); },
     tipLines: (d) => [el("div", "t", `${d.item} · ${d.n} layanan-strata`), ...d.where.slice(0, 10).map((w) => el("div", null, w)), ...(d.where.length > 10 ? [el("div", "t", `+${d.where.length - 10} lainnya`)] : [])],
   });
 }
@@ -1429,7 +1429,7 @@ const themeBtn = $("btn-theme");
 if (themeBtn) {
   const updateThemeIcon = () => {
     const cur = document.documentElement.getAttribute("data-theme") || "light";
-    themeBtn.textContent = cur === "dark" ? "☀️ Terang" : "🌙 Gelap";
+    themeBtn.innerHTML = cur === "dark" ? '<i class="fa-solid fa-sun"></i> Terang' : '<i class="fa-solid fa-moon"></i> Gelap';
   };
   updateThemeIcon();
   themeBtn.addEventListener("click", () => {
@@ -1500,6 +1500,8 @@ if (window.self !== window.top) {
 // Live clock for standalone view
 (function startClock() {
   const clockEl = document.getElementById('live-clock');
+  const yearEl = document.getElementById('footer-year');
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
   if (!clockEl) return;
   function tick() {
     const now = new Date();

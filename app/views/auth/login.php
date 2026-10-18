@@ -137,8 +137,13 @@
 
   <!-- Footer -->
   <div class="login-footer">
-    <span>&copy; <?= date('Y') ?> Kompetensi RS &mdash; v<?= APP_VER ?></span>
+    <span>&copy; <?= date('Y') ?> RSUD Kilisuci &mdash; ICT (Information and Communication Technology)</span>
     <a href="https://sirs.kemkes.go.id" target="_blank" rel="noopener">RS Online Kemenkes ↗</a>
+  </div>
+
+  <!-- Floating ICT Badge -->
+  <div class="ict-badge">
+    <img src="<?= asset('/assets/img/badge-ict.svg') ?>" alt="ICT RSUD Kilisuci" title="ICT RSUD Kilisuci">
   </div>
 
   <!-- Theme toggle -->

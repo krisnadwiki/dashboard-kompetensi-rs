@@ -504,7 +504,11 @@ body.sidebar-collapsed .main-wrapper { margin-left: var(--sb-width-coll); }
   padding: 24px;
 }
 .page-footer {
-  padding: 14px 24px;
+  position: sticky;
+  bottom: 0;
+  background: var(--bg-card);
+  z-index: 48;
+  padding: 10px 24px;
   border-top: 1px solid var(--border);
   font-size: 12px;
   color: var(--text-muted);
@@ -659,6 +663,14 @@ textarea.form-control { resize: vertical; min-height: 90px; }
 .form-error { font-size: 12px; color: var(--danger); margin-top: 4px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
+
+/* ─── Responsive Grid Layouts ─────────────────────────────────────────────── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.profil-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+@media (max-width: 768px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .profil-grid { grid-template-columns: 1fr; }
+}
 
 /* Input with icon */
 .input-group { position: relative; }
@@ -969,4 +981,22 @@ textarea.form-control { resize: vertical; min-height: 90px; }
     width: 100%;
     flex: 1 1 100%;
   }
+}
+
+/* ─── ICT Floating Badge ──────────────────────────────────────────────────── */
+.ict-badge {
+  position: fixed;
+  bottom: 54px;
+  right: 16px;
+  z-index: 50;
+  opacity: 0.9;
+  transition: opacity 0.2s, transform 0.2s;
+  cursor: pointer;
+}
+.ict-badge:hover { opacity: 1; transform: translateY(-2px); }
+.ict-badge img { width: 200px; height: auto; display: block; pointer-events: none; }
+
+@media (max-width: 600px) {
+  .ict-badge { bottom: 46px; right: 8px; }
+  .ict-badge img { width: 130px; }
 }

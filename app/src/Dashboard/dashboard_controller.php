@@ -80,7 +80,7 @@ ob_start();
 </div>
 
 <!-- Info RS & Quick Actions -->
-<div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:24px;">
+<div class="grid-2" style="margin-bottom:24px;">
 
   <!-- Profil RS Card -->
   <div class="card">

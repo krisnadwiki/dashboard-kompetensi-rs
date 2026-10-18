@@ -33,6 +33,8 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <!-- App CSS -->
   <link rel="stylesheet" href="<?= asset('/assets/css/app.css') ?>">
   <?php if (isset($extraCss)): foreach ($extraCss as $css): ?>
@@ -168,10 +170,41 @@
   </main>
 
   <footer class="page-footer">
-    <span>&copy; <?= date('Y') ?> Kompetensi RS &mdash; v<?= APP_VER ?></span>
+    <span>&copy; <?= date('Y') ?> RSUD Kilisuci &mdash; ICT (Information and Communication Technology)</span>
     <span class="footer-sep">|</span>
     <a href="https://sirs.kemkes.go.id" target="_blank" rel="noopener">RS Online Kemenkes</a>
   </footer>
+</div>
+
+<!-- Floating ICT Badge -->
+<div class="ict-badge">
+  <img src="<?= asset('/assets/img/badge-ict.svg') ?>" alt="ICT RSUD Kilisuci" title="ICT RSUD Kilisuci">
+</div>
+
+<!-- Logout Confirmation Modal -->
+<div class="modal-backdrop" id="logoutModal">
+  <div class="modal" style="max-width: 400px;">
+    <div class="modal-header">
+      <h3 style="font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin: 0;">
+        <i data-lucide="log-out" style="width: 20px; height: 20px; color: var(--danger);"></i>
+        Konfirmasi Keluar
+      </h3>
+      <button class="modal-close" id="logoutModalClose" aria-label="Tutup">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size: 14px; color: var(--text-muted); margin: 0; line-height: 1.6;">
+        Apakah Anda yakin ingin keluar dari sistem? Anda perlu masuk kembali untuk mengakses dashboard.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="logoutCancel">
+        <i data-lucide="x"></i> Batal
+      </button>
+      <a href="/logout" class="btn btn-danger" id="logoutConfirm">
+        <i data-lucide="log-out"></i> Ya, Keluar
+      </a>
+    </div>
+  </div>
 </div>
 
 <!-- ─── Scripts ───────────────────────────────────────────────────────────── -->
@@ -259,9 +292,22 @@
     applyTheme(theme);
   });
 
-  // ─── Logout confirm ──────────────────────────────────────────────────────
+  // ─── Logout modal ──────────────────────────────────────────────────────────
+  const logoutModal = document.getElementById('logoutModal');
+  function openLogoutModal() { logoutModal?.classList.add('open'); }
+  function closeLogoutModal() { logoutModal?.classList.remove('open'); }
+
   document.getElementById('logoutBtn')?.addEventListener('click', (e) => {
-    if (!confirm('Anda yakin ingin keluar?')) e.preventDefault();
+    e.preventDefault();
+    openLogoutModal();
+  });
+  document.getElementById('logoutModalClose')?.addEventListener('click', closeLogoutModal);
+  document.getElementById('logoutCancel')?.addEventListener('click', closeLogoutModal);
+  logoutModal?.addEventListener('click', (e) => {
+    if (e.target === logoutModal) closeLogoutModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && logoutModal?.classList.contains('open')) closeLogoutModal();
   });
 </script>
 

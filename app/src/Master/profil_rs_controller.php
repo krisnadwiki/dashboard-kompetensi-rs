@@ -90,7 +90,7 @@ ob_start();
 <form method="POST" action="/master/profil-rs">
   <?= Csrf::field() ?>
 
-  <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px;">
+  <div class="profil-grid">
     
     <!-- Left Column: Form Details -->
     <div>
