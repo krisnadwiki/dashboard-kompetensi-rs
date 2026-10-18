@@ -318,11 +318,18 @@ function buildModel() {
       nItems: its.length, label,
       kategoriNakes: katNakes,
       persyaratan: komp === "SDM" ? label : listNames(its),
-      persyaratanAll: komp === "SDM" ? [label] : [...new Set(its.map((i) => i.nama))],
+      persyaratanAll: komp === "SDM" ? [...new Set(its.map((i) => i.nama))] : [...new Set(its.map((i) => i.nama))],
       kurang: met ? "" : (komp === "SDM" && !w.length ? label : listNames(missing)),
-      kurangAll: met ? [] : (komp === "SDM" && !w.length ? [label] : [...new Set(missing.map((i) => i.nama))]),
+      kurangAll: met ? [] : [...new Set(missing.map((i) => i.nama))],
       dipenuhi: met ? have.map((i) => `${i.nama} (${i.jumlah})`).slice(0, 3).join("; ") : "",
     };
+    // Tag each raw item with group-level context for row colouring in Seluruh Detil
+    its.forEach((it) => {
+      it._met      = met;
+      it._wOk      = wOk;
+      it._sOk      = sOk;
+      it._isWajib  = it.status === "Wajib";
+    });
     g.item = shortName({ label: met ? g.persyaratan : (g.kurang || g.persyaratan), komp });
     groups.push(g);
   }
@@ -854,9 +861,15 @@ function renderTop() {
   });
 }
 
+function makeBullets(names) {
+  if (names.length <= 1) {
+    return names.map((n) => el("div", "kurang-single", n));
+  }
+  return names.map((n) => el("div", "kurang-bullet", n));
+}
+
 function renderTable() {
-  initLayananDropdowns();
-  const term = $("q").value.trim().toLowerCase();
+  initLayananDropdowns();  const term = $("q").value.trim().toLowerCase();
   const flay = $("f-layanan")?.value ? Number($("f-layanan").value) : 0;
   const fk = $("f-komp").value, fs = $("f-strata").value, ff = $("f-sifat").value;
   const p = ui.pick;
@@ -882,29 +895,41 @@ function renderTable() {
       const tk = el("td"); tk.append(el("span", "pill " + (g.komp === "SDM" ? "k-sdm" : "k-alk"), g.komp === "SDM" ? "SDM" : g.jenis === "Sarana" ? "Sarana" : "Alkes")); tr.append(tk);
       tr.append(el("td", "code hide-sm", g.group));
       const tdKurang = el("td", "col-kurang");
-      const allNames = g.met ? (g.persyaratanAll || []) : ((g.kurangAll && g.kurangAll.length) ? g.kurangAll : (g.persyaratanAll || []));
-      const maxShow = 3;
-      if (allNames.length <= maxShow) {
-        tdKurang.append(el("div", null, allNames.join(" / ")));
-      } else {
-        const container = el("div", "kurang-cell");
-        const summary = el("span", null, allNames.slice(0, maxShow).join(" / "));
-        const btn = el("button", "expand-toggle");
-        btn.type = "button";
-        btn.textContent = ` / +${allNames.length - maxShow} lainnya`;
-        btn.addEventListener("click", function () {
-          if (this.dataset.expanded === "1") {
-            summary.textContent = allNames.slice(0, maxShow).join(" / ");
-            this.textContent = ` / +${allNames.length - maxShow} lainnya`;
-            this.dataset.expanded = "0";
-          } else {
-            summary.textContent = allNames.join(" / ");
-            this.textContent = " \u2190 tutup";
-            this.dataset.expanded = "1";
-          }
+      const allNames = g.met
+        ? (g.persyaratanAll || [])
+        : ((g.kurangAll && g.kurangAll.length) ? g.kurangAll : (g.persyaratanAll || []));
+      const isSDM = g.komp === "SDM";
+      const isSub = g.sifat === "Substitusi";
+
+      // Always show the short group label as the main line
+      const mainLabel = g.item || allNames[0] || "";
+      const detailNames = allNames; // full list for the dropdown
+
+      // Main label line
+      const mainDiv = el("div", "kurang-main", mainLabel);
+      tdKurang.append(mainDiv);
+
+      // If more than 1 item, offer "Lihat selengkapnya" expand
+      if (detailNames.length > 1) {
+        const detailList = el("div", "kurang-detail-list");
+        detailList.hidden = true;
+        detailNames.forEach((n) => {
+          const item = el("div", "kurang-detail-item", n);
+          detailList.append(item);
         });
-        container.append(summary, btn);
-        tdKurang.append(container);
+
+        const toggleBtn = el("button", "kurang-see-more");
+        toggleBtn.type = "button";
+        toggleBtn.innerHTML = `<i class="fa-solid fa-chevron-down" style="font-size:.6rem"></i> Lihat selengkapnya`;
+        toggleBtn.addEventListener("click", function () {
+          const open = !detailList.hidden;
+          detailList.hidden = open;
+          this.innerHTML = open
+            ? `<i class="fa-solid fa-chevron-down" style="font-size:.6rem"></i> Lihat selengkapnya`
+            : `<i class="fa-solid fa-chevron-up" style="font-size:.6rem"></i> Sembunyikan`;
+        });
+
+        tdKurang.append(toggleBtn, detailList);
       }
       if (g.komp === "SDM" && g.kategoriNakes) {
         const sub = el("div", "hide-sm", `Kategori Nakes: ${g.kategoriNakes}`);
@@ -1057,8 +1082,26 @@ function renderAllTable() {
     tdKomp.append(el("span", "pill " + (it.komp === "SDM" ? "k-sdm" : "k-alk"), it.komp === "SDM" ? "SDM" : (it.jenis || "Alkes")));
     tr.append(tdKomp);
 
-    // 5. Nama Komponen / Uraian
+    // 5. Nama Komponen / Uraian — with row-level colour based on status
     const tdNama = el("td");
+    const isWajib  = it._isWajib;
+    const isMet    = it._met || (it.jumlah > 0);
+    // Colour logic:
+    //   met (jumlah>0)         → black (default)
+    //   wajib + not met        → red
+    //   substitusi + none met  → orange (first warning)
+    //   substitusi + some met  → muted (not needed)
+    let nameClass = "";
+    if (!it._met) {
+      if (isWajib && !(it.jumlah > 0)) {
+        nameClass = "nama-wajib-missing";
+      } else if (!isWajib && !it._sOk) {
+        nameClass = "nama-sub-missing";
+      } else if (!isWajib && it._sOk) {
+        nameClass = "nama-sub-ok";
+      }
+    }
+    tdNama.className = nameClass;
     tdNama.style.fontWeight = "500";
     tdNama.textContent = it.nama;
     if (it.kode) {
@@ -1082,8 +1125,8 @@ function renderAllTable() {
 
     // 7. Status (Wajib / Substitusi)
     const tdStatus = el("td");
-    const isWajib = /wajib/i.test(it.status);
-    tdStatus.append(el("span", isWajib ? "badge-status-wajib" : "badge-status-sub", isWajib ? "Wajib" : "Substitusi"));
+    const itIsWajib = /wajib/i.test(it.status);
+    tdStatus.append(el("span", itIsWajib ? "badge-status-wajib" : "badge-status-sub", itIsWajib ? "Wajib" : "Substitusi"));
     tr.append(tdStatus);
 
     // 8. Jumlah (Ada: Hijau, Kosong: Lembut)

@@ -414,17 +414,86 @@ table.mx td.nm .n { font-family: var(--f-mono); color: var(--muted); margin-righ
 .btn-reset:hover { border-color: var(--bad); color: var(--bad); background: var(--bad-bg); }
 .tbox { overflow: auto; border-top: 1px solid var(--line); min-height: 45vh; max-height: 70vh; }
 table.gap { width: 100%; border-collapse: collapse; font-size: .82rem; }
-table.gap th { position: sticky; top: 0; background: var(--panel); text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); font-weight: 600; white-space: nowrap; }
+table.gap th { position: sticky; top: 0; background: var(--panel); text-align: left; padding: 8px 6px; border-bottom: 2px solid var(--line); font-weight: 600; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.06); z-index: 2; }
 table.gap th button { all: unset; cursor: pointer; }
 table.gap th[aria-sort="ascending"] button::after { content: " ↑"; color: var(--muted); }
 table.gap th[aria-sort="descending"] button::after { content: " ↓"; color: var(--muted); }
 table.gap td { padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
 td.code { font-family: var(--f-mono); font-size: .76rem; color: var(--muted); white-space: nowrap; }
 .kurang-cell { display: inline; }
-.col-kurang { max-width: 340px; }
-.col-kurang > div, .col-kurang > .kurang-cell { max-width: 100%; word-break: break-word; overflow-wrap: break-word; }
-.expand-toggle { font: inherit; font-size: .78rem; color: var(--primary); background: none; border: none; cursor: pointer; padding: 0; font-weight: 600; transition: opacity 0.1s; }
-.expand-toggle:hover { opacity: 0.7; text-decoration: underline; }
+.col-kurang { width: 300px; min-width: 200px; max-width: 320px; }
+.col-kurang > div, .col-kurang > .kurang-list { max-width: 100%; }
+.kurang-list { display: flex; flex-direction: column; gap: 3px; }
+.kurang-single { font-size: .82rem; line-height: 1.45; word-break: break-word; overflow-wrap: break-word; }
+.kurang-main { font-size: .82rem; font-weight: 500; line-height: 1.45; word-break: break-word; overflow-wrap: break-word; color: var(--fg); }
+.kurang-see-more {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 4px; font: inherit; font-size: .74rem; font-weight: 600;
+  color: var(--primary); background: none; border: none; cursor: pointer;
+  padding: 0; text-decoration: underline; text-underline-offset: 2px;
+  transition: opacity 0.12s;
+}
+.kurang-see-more:hover { opacity: 0.72; }
+.kurang-detail-list { margin-top: 5px; display: flex; flex-direction: column; gap: 3px; padding-left: 4px; border-left: 2px solid var(--line); margin-left: 2px; }
+.kurang-detail-item { position: relative; padding-left: 12px; font-size: .78rem; line-height: 1.4; color: var(--muted); word-break: break-word; overflow-wrap: break-word; }
+.kurang-detail-item::before { content: "•"; position: absolute; left: 2px; color: var(--muted); opacity: 0.5; }
+.kurang-bullet {
+  position: relative;
+  padding-left: 13px;
+  font-size: .82rem;
+  line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+.kurang-bullet::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: var(--muted);
+  font-size: .9rem;
+  line-height: 1.45;
+}
+.kurang-sub-indent {
+  position: relative;
+  padding-left: 18px;
+  font-size: .78rem;
+  line-height: 1.4;
+  color: var(--muted);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  margin-top: 1px;
+}
+.kurang-sub-indent::before {
+  content: "↳";
+  position: absolute;
+  left: 4px;
+  font-size: .72rem;
+  color: var(--muted);
+  opacity: 0.6;
+  line-height: 1.4;
+}
+
+/* ─── Seluruh Detil row name colours ─────────────────────────────────────── */
+.nama-wajib-missing { color: var(--bad); font-weight: 600 !important; }
+.nama-sub-missing   { color: #d97706; font-weight: 600 !important; }
+.nama-sub-ok        { color: var(--muted); font-weight: 400 !important; }
+.expand-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  font: inherit;
+  font-size: .74rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--accent-soft, rgba(59,110,240,0.08));
+  border: 1px solid rgba(59,110,240,0.18);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px 7px;
+  transition: opacity 0.12s, background 0.12s;
+}
+.expand-toggle:hover { opacity: 0.8; background: rgba(59,110,240,0.14); }
 .pill { display: inline-block; font-size: .72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
 .pill.w { background: var(--bad-bg); color: var(--bad); }
 .pill.s { background: var(--accent-soft); color: var(--muted); }
