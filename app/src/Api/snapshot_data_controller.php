@@ -26,7 +26,8 @@ $isAuth = Auth::check();
 // 3. Publik TIDAK BISA melihat audit list snapshots.
 // 4. Cache-Control 60s untuk melindungi server dari serangan DoS / repetitive queries.
 if (!$isAuth) {
-    header('Cache-Control: public, max-age=60');
+    header('Cache-Control: no-cache, must-revalidate');
+    header('Pragma: no-cache');
 
     $latestSnap = Db::fetchOne(
         "SELECT id, name, periode, description, total_items, data_json, created_at 

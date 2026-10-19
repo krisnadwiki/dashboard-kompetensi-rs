@@ -1507,7 +1507,7 @@ if (window.self !== window.top) {
 } else {
   document.body.classList.remove('in-iframe');
   // Standalone public view: auto fetch latest snapshot from database
-  fetch('/api/snapshot-data')
+  fetch('/api/snapshot-data', { cache: 'no-store' })
     .then((r) => r.json())
     .then((data) => {
       if (data.status === 'success' && data.items && data.items.length > 0) {
