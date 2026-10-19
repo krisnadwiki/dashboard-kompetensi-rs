@@ -1499,22 +1499,27 @@ window.downloadXlsx = () => $("btn-xlsx")?.click();
 window.resetAllData = () => { sources = new Map(); loadSeed(); rebuild(); };
 
 restore();
-rebuild();
 
 // In-iframe detection & Public Standalone Mode
 if (window.self !== window.top) {
   document.body.classList.add('in-iframe');
+  rebuild(); // iframe: langsung pakai seed/local
 } else {
   document.body.classList.remove('in-iframe');
-  // Standalone public view: auto fetch latest snapshot from database
+
+  // Tampilkan indikator loading sebelum fetch
+  const lead = $('lead');
+  if (lead) lead.innerHTML = '<span style="color:var(--muted)">Memuat data terkini dari server&hellip;</span>';
+  const liveTag = $('live-tag');
+  if (liveTag) { liveTag.textContent = 'Memuat…'; liveTag.className = 'tag seed'; }
+
+  // Standalone public view: fetch snapshot dulu, baru rebuild
   fetch('/api/snapshot-data', { cache: 'no-store' })
-    .then((r) => r.json())
+    .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then((data) => {
       if (data.status === 'success' && data.items && data.items.length > 0) {
         loadCustomSnapshot(data.items, data.name || 'Tarikan SIRS Terkini');
-        const lead = $('lead');
         if (lead) {
-          // Format timestamp from created_at
           let tsStr = '';
           if (data.created_at) {
             const dt = new Date(data.created_at.replace(' ', 'T'));
@@ -1530,14 +1535,20 @@ if (window.self !== window.top) {
             ' &bull; <b>' + data.total.toLocaleString('id-ID') + ' baris</b> instrumen terstandar terintegrasi' +
             tsStr + '.';
         }
-        // Update live-tag (single pulsing bullet from CSS ::before)
-        const liveTag = $('live-tag');
-        if (liveTag) {
-          liveTag.textContent = 'Data Terkini';
-        }
+        if (liveTag) { liveTag.textContent = 'Data Terkini'; liveTag.className = 'tag on'; }
+      } else {
+        // Snapshot kosong: fallback ke seed
+        loadSeed(); rebuild();
+        if (lead) lead.textContent = 'Belum ada snapshot aktif. Menampilkan data rekap bawaan.';
+        if (liveTag) { liveTag.textContent = 'Rekap Bawaan'; liveTag.className = 'tag seed'; }
       }
     })
-    .catch(() => {});
+    .catch(() => {
+      // Fetch gagal (offline / error): fallback ke seed
+      loadSeed(); rebuild();
+      if (lead) lead.textContent = 'Gagal memuat data server. Menampilkan data rekap bawaan.';
+      if (liveTag) { liveTag.textContent = 'Rekap Bawaan'; liveTag.className = 'tag seed'; }
+    });
 }
 
 // Live clock for standalone view
